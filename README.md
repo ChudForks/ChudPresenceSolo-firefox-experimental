@@ -32,9 +32,12 @@ use.
 
 ## Firefox-specific behavior
 
-Firefox does not provide Chrome's offscreen-document API. The fork therefore does
-not schedule best-effort deletion of a Discord Headless Session when Firefox is
-force-closed. Normal disconnects and playback stops still clear the session.
+Firefox does not provide Chrome's `fetchLater()` API or offscreen-document API.
+When a supported tab or window closes normally, the fork sends Discord's session
+deletion request with `fetch(..., { keepalive: true })`, allowing that request to
+continue while Firefox tears down the initiating context. This is best effort: a
+browser crash or forced termination can still leave a Discord session until it
+expires. Normal disconnects and playback stops also clear the session.
 
 Its Manifest V3 background is a Firefox module background script, so Firefox runs
 the persistent background page. This fork requires Firefox 142 or later.
