@@ -55,8 +55,7 @@ specific service to stop sharing; disabling 67Movies also stops its TMDB metadat
 lookups. Use **Disconnect** to delete the active Discord session and revoke the
 stored Discord authorization before uninstalling.
 
-See [PRIVACY.md](PRIVACY.md) for the full privacy policy and [AMO_LISTING.md](AMO_LISTING.md)
-for submission-ready AMO text and reviewer notes.
+See [PRIVACY.md](PRIVACY.md) for the full privacy policy.
 
 ## Development
 
