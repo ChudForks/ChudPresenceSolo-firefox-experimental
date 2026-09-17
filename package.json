@@ -1,0 +1,13 @@
+{
+  "name": "chudpresence-solo-firefox-experimental",
+  "version": "1.8.0",
+  "private": true,
+  "type": "module",
+  "description": "Experimental Firefox fork of ChudPresence Solo.",
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "test": "node --test",
+    "build": "node scripts/build.mjs"
+  },
+  "engines": { "node": ">=18" }
+}

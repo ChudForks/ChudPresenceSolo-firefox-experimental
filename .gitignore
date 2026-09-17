@@ -1,0 +1,21 @@
+node_modules/
+.DS_Store
+Thumbs.db
+dist/
+
+# Local environment files and signing material.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local extension tooling output.
+web-ext-artifacts/
+coverage/
+*.log
+
+# Local screenshots may contain personal information. Keep them out of Git.
+/[Cc]odex*.png

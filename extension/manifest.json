@@ -1,0 +1,102 @@
+{
+  "manifest_version": 3,
+  "name": "ChudPresence Solo — Firefox Experimental",
+  "version": "1.8.0",
+  "description": "Experimental Firefox build for sharing playback activity from supported streaming sites on Discord.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "ChudPresence Solo",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "scripts": ["background.js"],
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://music.youtube.com/*",
+        "https://www.youtube.com/*",
+        "https://youtube.com/*"
+      ],
+      "js": ["injected.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://music.youtube.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.youtube.com/*", "https://youtube.com/*"],
+      "js": ["youtube.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.crunchyroll.com/*",
+        "https://crunchyroll.com/*",
+        "https://beta.crunchyroll.com/*"
+      ],
+      "js": ["crunchyroll.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.crunchyroll.com/*",
+        "https://crunchyroll.com/*",
+        "https://beta.crunchyroll.com/*",
+        "https://static.crunchyroll.com/*"
+      ],
+      "js": ["crunchyroll-player.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": ["https://67movies.st/*", "https://www.67movies.st/*"],
+      "js": ["movies67.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.twitch.tv/*", "https://twitch.tv/*"],
+      "js": ["twitch.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://kick.com/*", "https://www.kick.com/*"],
+      "js": ["kick.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": ["alarms", "identity", "storage"],
+  "host_permissions": [
+    "https://discord.com/api/*",
+    "https://discord.com/oauth2/*"
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "chudpresence-solo-firefox-experimental@local",
+      "strict_min_version": "142.0",
+      "data_collection_permissions": {
+        "required": [
+          "authenticationInfo",
+          "browsingActivity",
+          "websiteActivity",
+          "websiteContent"
+        ]
+      }
+    }
+  }
+}

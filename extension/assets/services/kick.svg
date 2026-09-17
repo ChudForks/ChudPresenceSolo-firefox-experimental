@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Kick">
+  <rect width="48" height="48" rx="12" fill="#53fc18"/>
+  <path fill="#111" d="M11 8h9v8h4v-4h13v10h-5v5h5v10H24v-4h-4v7h-9zm9 16h4v-4h-4zm4 5h-4v4h4z"/>
+</svg>

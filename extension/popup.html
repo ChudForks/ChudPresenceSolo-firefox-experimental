@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ChudPresence Solo</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body data-view="activity">
+    <div class="ambient ambient-one" aria-hidden="true"></div>
+    <div class="ambient ambient-two" aria-hidden="true"></div>
+
+    <header class="app-bar">
+      <button class="brand-button" id="show-activity" type="button" aria-label="Show activity">
+        <span class="logo-shell"><img src="icons/icon48.png" alt="" /></span>
+        <span class="brand-copy">
+          <strong>ChudPresence Solo</strong>
+          <small><i class="status-dot"></i><span id="brand-status">Ready</span></small>
+        </span>
+      </button>
+      <nav class="top-actions" aria-label="Panel navigation">
+        <button class="nav-button is-active" id="activity-tab" type="button" aria-label="Activity" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h3l2-6 4 11 2-5h5" /></svg>
+        </button>
+        <button class="nav-button" id="settings-tab" type="button" aria-label="Settings" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.86 2.86-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9.55v-.1A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.86-2.86.06-.06A1.7 1.7 0 0 0 4.1 15a1.7 1.7 0 0 0-1.1-1 1.7 1.7 0 0 0-1.1-.4H2V9.55h.1A1.7 1.7 0 0 0 4.1 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06L6.56 3.7l.06.06A1.7 1.7 0 0 0 8.5 4.1a1.7 1.7 0 0 0 1-1.1 1.7 1.7 0 0 0 .4-1.1V2h4.05v.1A1.7 1.7 0 0 0 15 4.1a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.86 2.86-.06.06A1.7 1.7 0 0 0 19.4 8.5a1.7 1.7 0 0 0 1.1 1 1.7 1.7 0 0 0 1.1.4h.1v4.05h-.1a1.7 1.7 0 0 0-2.2 1.05Z"/></svg>
+        </button>
+      </nav>
+    </header>
+
+    <main class="panel-view activity-view" id="activity-view" aria-labelledby="activity-title">
+      <section class="presence-card" id="now">
+        <div class="presence-glow" id="presence-glow" aria-hidden="true"></div>
+        <div class="presence-heading">
+          <span class="eyebrow" id="activity-title">Discord presence</span>
+          <span class="state-badge" id="presence-state"><i></i>Waiting</span>
+        </div>
+        <div class="presence-body">
+          <div class="art-wrap">
+            <img id="art" alt="Playback artwork" hidden />
+            <div class="art-fallback" id="art-fallback" aria-hidden="true">
+              <svg viewBox="0 0 32 32"><rect x="4" y="7" width="24" height="18" rx="5"/><path d="m13 12 7 4-7 4z"/></svg>
+            </div>
+            <span class="service-mark"><img id="active-service-icon" src="icons/icon32.png" alt="" /></span>
+          </div>
+          <div class="presence-copy">
+            <span class="kicker" id="kicker">Nothing playing</span>
+            <h1 id="title">Open a supported streaming site</h1>
+            <p id="artist">Your activity preview will appear here.</p>
+          </div>
+        </div>
+        <div class="connection-line">
+          <span><i class="connection-dot" id="extension-dot"></i>Extension</span>
+          <span class="line"></span>
+          <span><i class="connection-dot" id="discord-dot"></i>Discord</span>
+        </div>
+      </section>
+
+      <section class="services-section" aria-labelledby="services-title">
+        <div class="section-heading">
+          <div><span class="eyebrow">Sources</span><h2 id="services-title">Supported services</h2></div>
+          <button class="text-button" id="manage-services" type="button">Manage</button>
+        </div>
+        <div class="service-grid">
+          <article class="service-tile" data-service="youtube"><img src="assets/services/youtube.svg" alt="" /><span><strong>YouTube</strong><small>Videos &amp; live</small></span><i></i></article>
+          <article class="service-tile" data-service="youtubeMusic"><img src="assets/services/youtube-music.svg" alt="" /><span><strong>YT Music</strong><small>Music</small></span><i></i></article>
+          <article class="service-tile" data-service="crunchyroll"><img src="assets/services/crunchyroll.svg" alt="" /><span><strong>Crunchyroll</strong><small>Anime</small></span><i></i></article>
+          <article class="service-tile" data-service="movies67"><img src="assets/services/movies67.svg" alt="" /><span><strong>67Movies</strong><small>Movies &amp; TV</small></span><i></i></article>
+          <article class="service-tile" data-service="twitch"><img src="assets/services/twitch.svg" alt="" /><span><strong>Twitch</strong><small>Streams &amp; VODs</small></span><i></i></article>
+          <article class="service-tile" data-service="kick"><img src="assets/services/kick.svg" alt="" /><span><strong>Kick</strong><small>Streams &amp; VODs</small></span><i></i></article>
+        </div>
+      </section>
+
+      <section class="discord-card">
+        <img src="assets/services/discord.svg" alt="" />
+        <span><strong id="discord-title">Connect Discord</strong><small id="hint" role="status">Share what you're watching or listening to.</small></span>
+        <button id="discord-action" type="button"><span>Connect</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 4 6 6-6 6"/></svg></button>
+      </section>
+
+      <button class="settings-cta" id="open-settings" type="button">
+        <span class="cta-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.86 2.86-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9.55v-.1A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.86-2.86.06-.06A1.7 1.7 0 0 0 4.1 15a1.7 1.7 0 0 0-1.1-1 1.7 1.7 0 0 0-1.1-.4H2V9.55h.1A1.7 1.7 0 0 0 4.1 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06L6.56 3.7l.06.06A1.7 1.7 0 0 0 8.5 4.1a1.7 1.7 0 0 0 1-1.1 1.7 1.7 0 0 0 .4-1.1V2h4.05v.1A1.7 1.7 0 0 0 15 4.1a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.86 2.86-.06.06A1.7 1.7 0 0 0 19.4 8.5a1.7 1.7 0 0 0 1.1 1 1.7 1.7 0 0 0 1.1.4h.1v4.05h-.1a1.7 1.7 0 0 0-2.2 1.05Z"/></svg></span>
+        <span><strong>Personalize your presence</strong><small>Per-service artwork, timers, buttons, and more</small></span>
+        <svg class="chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="m7 4 6 6-6 6"/></svg>
+      </button>
+    </main>
+
+    <main class="panel-view settings-view" id="settings-view" aria-labelledby="settings-title" hidden>
+      <div class="settings-intro">
+        <div><span class="eyebrow">Preferences</span><h1 id="settings-title">Settings</h1></div>
+        <span id="save-status" role="status" aria-live="polite">Saved locally</span>
+      </div>
+
+      <form id="settings-form">
+        <section class="settings-group general-group">
+          <label class="setting-row master-row">
+            <span class="setting-icon power-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v10M5.6 5.6a9 9 0 1 0 12.8 0"/></svg></span>
+            <span class="setting-copy"><strong>Enable ChudPresence Solo</strong><small>Share supported playback activity</small></span>
+            <span class="toggle"><input id="enabled" name="enabled" type="checkbox" /><i></i></span>
+          </label>
+          <div class="setting-row connection-setting">
+            <span class="setting-icon"><img src="assets/services/discord.svg" alt="" /></span>
+            <span class="setting-copy"><strong>Discord connection</strong><small id="discord-status">Not connected</small><button class="oauth-redirect" id="firefox-oauth-redirect" type="button" hidden></button></span>
+            <button class="small-action" id="settings-discord-action" type="button">Connect</button>
+          </div>
+          <div class="sharing-disclosure" role="note">
+            When you connect Discord and enable sharing, this add-on sends the current
+            service, title, creator or artist, playback state, optional artwork and
+            optional link to Discord. Disable sharing, disable a service, or Disconnect
+            at any time. The optional 67Movies service sends its media identifier to
+            TMDB for title and artwork lookup; disable that service to stop those
+            lookups. It never sends these details back to the streaming site.
+          </div>
+        </section>
+
+        <div class="settings-label"><span>Services</span><small>Tap a service for details</small></div>
+        <div id="service-settings"></div>
+
+        <section class="privacy-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-3.7 8-10V5l-8-3-8 3v7c0 6.3 8 10 8 10Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg>
+          <span><strong>Your privacy controls</strong><small>OAuth tokens and preferences stay in Firefox extension storage. Use Disconnect to revoke Discord access before removing the add-on.</small></span>
+        </section>
+
+        <button class="reset-button" id="reset" type="button">Restore default settings</button>
+      </form>
+    </main>
+
+    <template id="service-settings-template">
+      <details class="service-settings-card">
+        <summary>
+          <span class="service-summary-icon"><img alt="" /></span>
+          <span class="setting-copy"><strong></strong><small></small></span>
+          <span class="toggle service-master"><input type="checkbox" /><i></i></span>
+          <svg class="expand-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7 5 5 5-5"/></svg>
+        </summary>
+        <div class="service-options">
+          <label class="compact-row"><span><strong>Show while paused</strong><small>Keep activity visible when playback stops</small></span><span class="toggle compact"><input data-setting="paused" type="checkbox" /><i></i></span></label>
+          <label class="compact-row select-row"><span><strong>Status text</strong><small>Text shown in Discord's member list</small></span><select data-setting="status"></select></label>
+          <label class="compact-row"><span><strong>Artwork</strong><small>Show cover art or video thumbnail</small></span><span class="toggle compact"><input data-setting="artwork" type="checkbox" /><i></i></span></label>
+          <label class="compact-row"><span><strong>Playback progress</strong><small>Show elapsed and remaining time</small></span><span class="toggle compact"><input data-setting="timestamps" type="checkbox" /><i></i></span></label>
+          <label class="compact-row"><span><strong>Action buttons</strong><small>Add watch, play, or channel buttons</small></span><span class="toggle compact"><input data-setting="buttons" type="checkbox" /><i></i></span></label>
+        </div>
+      </details>
+    </template>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
