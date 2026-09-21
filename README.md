@@ -12,14 +12,8 @@ can experimentally publish it to Discord.
 
 1. Run `npm run build`, or use the unpacked `extension` directory while developing.
 2. Open `about:debugging#/runtime/this-firefox`.
-3. Select **Load Temporary Add-on** and choose `extension/manifest.json`.
-4. Open the add-on's panel. In Settings, copy the **Register Firefox callback**
-   value shown under Discord connection.
-5. In the Discord Developer Portal for client ID `1549066134706323548`, add that
-   exact value to the application's OAuth2 Redirects and ensure **Public Client**
-   is enabled. This is a one-time developer-portal configuration step; the fork
-   does not modify the existing Chromium redirect or original extension.
-6. Select **Connect**, then play something on a supported site.
+3. Select **Load Temporary Add-on** and choose `extension/manifest.json` or use build.bat and use the built xpi.
+4. Select **Connect**, then play something on a supported site.
 
 Firefox derives the callback from the add-on at runtime via
 `identity.getRedirectURL()`. The manifest pins this experimental add-on ID, so the
