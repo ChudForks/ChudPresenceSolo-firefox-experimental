@@ -116,6 +116,8 @@ body[data-enabled="false"] .status-dot { background: #6f7484; box-shadow: none; 
 .text-button:hover { color: #cbd1ff; }
 .service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .service-tile { position: relative; display: flex; align-items: center; min-width: 0; gap: 9px; min-height: 54px; padding: 9px 24px 9px 9px; border: 1px solid var(--line); border-radius: 13px; background: linear-gradient(145deg, rgba(24,29,47,.9), rgba(14,17,29,.92)); box-shadow: 0 8px 22px rgba(0,0,0,.13), inset 0 1px 0 rgba(255,255,255,.025); }
+.activity-service-tile { width: 100%; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.activity-service-tile:hover { border-color: rgba(139,151,255,.28); background: linear-gradient(145deg, rgba(30,35,56,.96), rgba(17,21,36,.98)); }
 .service-tile img { width: 34px; height: 34px; flex: 0 0 auto; border-radius: 10px; box-shadow: 0 6px 14px rgba(0,0,0,.25); }
 .service-tile span { display: grid; min-width: 0; }
 .service-tile strong { overflow: hidden; font-size: 10.5px; font-weight: 620; text-overflow: ellipsis; white-space: nowrap; }
@@ -135,7 +137,7 @@ body[data-enabled="false"] .status-dot { background: #6f7484; box-shadow: none; 
 .discord-card button[data-action="disconnect"] { border-color: var(--line-strong); color: #d8dbe8; background: rgba(255,255,255,.06); box-shadow: none; }
 .discord-card button:disabled, .small-action:disabled { cursor: wait; opacity: .6; }
 
-.settings-cta { display: grid; grid-template-columns: 34px minmax(0, 1fr) 18px; align-items: center; gap: 10px; width: 100%; min-height: 59px; margin-top: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 14px; color: inherit; background: rgba(16,19,32,.72); cursor: pointer; text-align: left; transition: .16s ease; }
+.settings-cta { display: grid; grid-template-columns: 34px minmax(0, 1fr) 18px; align-items: center; gap: 10px; width: 100%; min-height: 59px; margin-top: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 14px; color: inherit; background: rgba(16,19,32,.72); cursor: pointer; text-align: left; text-decoration: none; transition: .16s ease; }
 .settings-cta:hover { border-color: rgba(139,151,255,.24); background: rgba(25,29,48,.92); transform: translateY(-1px); }
 .cta-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: #b4b8ff; background: linear-gradient(145deg, rgba(95,121,255,.27), rgba(119,73,255,.15)); }
 .cta-icon svg { width: 18px; height: 18px; }
@@ -176,6 +178,7 @@ body[data-enabled="false"] .status-dot { background: #6f7484; box-shadow: none; 
 .settings-label span { color: #9da4b8; font-size: 9px; font-weight: 740; letter-spacing: .12em; text-transform: uppercase; }
 .settings-label small { color: #626a7e; font-size: 8.5px; }
 #service-settings { display: grid; gap: 8px; }
+#activity-settings { display: grid; gap: 8px; }
 .service-settings-card { border-radius: 14px; }
 .service-settings-card summary { position: relative; display: flex; align-items: center; min-height: 63px; gap: 10px; padding: 10px 47px 10px 11px; cursor: pointer; list-style: none; user-select: none; }
 .service-settings-card summary::-webkit-details-marker { display: none; }

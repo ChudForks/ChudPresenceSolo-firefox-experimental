@@ -2,22 +2,23 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createPresenceIntent } from '../extension/core/presence.js';
 
-test('maps a playing track to a Discord-ready presence intent', () => {
+test('formats a song Activity through the generic presence path', () => {
   const intent = createPresenceIntent({
-    source: 'youtubeMusic',
+    source: 'sample-activity',
+    activityName: 'Sample Music Activity',
     kind: 'song',
     title: 'A Song',
     artist: 'An Artist',
     album: 'An Album',
     artwork: 'https://example.com/art.jpg',
-    url: 'https://music.youtube.com/watch?v=abcdefghijk',
+    url: 'https://music.example.com/watch?id=abcdefghijk',
     playing: true,
     position: 30,
     duration: 210,
   }, 1_000_000);
 
   assert.deepEqual(intent, {
-    name: 'YouTube Music',
+    name: 'Sample Music Activity',
     type: 'listening',
     details: 'A Song',
     state: 'An Artist',
@@ -25,11 +26,35 @@ test('maps a playing track to a Discord-ready presence intent', () => {
     timestamps: { start: 970, end: 1180 },
     assets: { largeImage: 'https://example.com/art.jpg', largeText: 'An Album' },
     buttons: [
-      { label: 'Play on YouTube Music', url: 'https://music.youtube.com/watch?v=abcdefghijk' },
-      { label: 'Search artist', url: 'https://music.youtube.com/search?q=An+Artist' },
+      { label: 'Open', url: 'https://music.example.com/watch?id=abcdefghijk' },
     ],
-    source: 'youtubeMusic',
+    source: 'sample-activity',
   });
+});
+
+test('applies installed Activity status, artwork, timer, and button preferences', () => {
+  const intent = createPresenceIntent({
+    source: 'sample-activity',
+    activityName: 'Sample Music Activity',
+    kind: 'song',
+    title: 'A Song',
+    artist: 'An Artist',
+    artwork: 'https://example.com/art.jpg',
+    url: 'https://music.example.com/watch?id=abcdefghijk',
+    playing: true,
+    position: 30,
+    duration: 210,
+  }, 1_000_000, {
+    statusDisplay: 'track',
+    showArtwork: false,
+    showTimestamps: false,
+    showButtons: false,
+  });
+
+  assert.equal(intent.statusDisplayType, 'details');
+  assert.equal(intent.assets, null);
+  assert.equal(intent.timestamps, null);
+  assert.deepEqual(intent.buttons, []);
 });
 
 test('omits timers while paused and rejects unsafe URLs', () => {
@@ -91,6 +116,8 @@ test('uses YouTube layouts for videos, Shorts, and live streams', () => {
 test('uses dedicated Crunchyroll episode and movie layouts', () => {
   const episode = createPresenceIntent({
     source: 'crunchyroll',
+    activityId: 'crunchyroll',
+    activityName: 'Crunchyroll',
     kind: 'episode',
     title: 'The Adventure Begins',
     artist: 'Example Series',
@@ -112,6 +139,8 @@ test('uses dedicated Crunchyroll episode and movie layouts', () => {
 
   const movie = createPresenceIntent({
     source: 'crunchyroll',
+    activityId: 'crunchyroll',
+    activityName: 'Crunchyroll',
     kind: 'movie',
     title: 'Example Movie',
     url: 'https://www.crunchyroll.com/watch/MOVIE123',

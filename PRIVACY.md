@@ -7,11 +7,12 @@ Discord presence. This policy describes the data used for that purpose.
 
 ## Data the add-on reads
 
-On supported streaming pages, the add-on reads the current service, media title,
-creator or artist, artwork URL, playback state, elapsed time, duration, and the
-page or media URL when available. It does not read passwords, payment details,
-private messages, form entries, browsing history outside supported pages, or
-cookies.
+Packaged providers read playback details on their supported streaming pages.
+User-installed Activities can read page content only on the HTTPS sites the user
+approves for that Activity. Activity reports are limited to title, creator or
+artist, album, artwork and media URLs, playback state, progress, kind, and
+optional buttons. It does not read passwords, payment details, private messages,
+form entries, browsing history outside approved supported pages, or cookies.
 
 The 67Movies integration uses the movie or TV identifier present in the current
 page URL to request matching title, artwork, and runtime metadata from The Movie
@@ -30,14 +31,20 @@ retrieve matching metadata. TMDB's handling of that request is governed by
 TMDB's own policies.
 
 The add-on does not sell data, use analytics, inject advertising, or send playback
-metadata to the supported streaming services.
+metadata to the supported streaming services. The Activity Library downloads the
+catalog from the public `ChudForks/ChudPresence-Activities` GitHub repository. It downloads
+Activity code only when the user installs or updates one, verifies its catalog
+hash, and stores the installed source in Firefox extension storage. Community
+Activity code runs in a separate Firefox `USER_SCRIPT` world with access only to
+its approved site pages and the narrow Activity report messaging API.
 
 ## Authentication and local storage
 
 After Discord authorization, the add-on stores Discord OAuth access and refresh
 tokens, the active Discord Headless Session token, and user preferences in
 Firefox extension storage. This allows the add-on to renew or clear the user's
-presence. These credentials are not provided to web pages or content scripts.
+presence. These credentials are not provided to web pages, packaged site
+observers, or Activity scripts.
 
 ## User controls and deletion
 

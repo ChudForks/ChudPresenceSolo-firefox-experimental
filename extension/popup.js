@@ -1,20 +1,11 @@
 import { DEFAULT_SETTINGS, normalizeSettings, SERVICE_SETTINGS } from './core/settings.js';
+import { DEFAULT_ACTIVITY_PREFERENCES } from './core/activity-settings.js';
 
 const serviceUi = Object.freeze({
   youtube: {
     icon: 'assets/services/youtube.svg',
     description: 'Videos, Shorts, and live streams',
     statuses: [['app', 'YouTube'], ['creator', 'Creator / channel'], ['video', 'Video title']],
-  },
-  youtubeMusic: {
-    icon: 'assets/services/youtube-music.svg',
-    description: 'Songs, artists, and albums',
-    statuses: [['app', 'YouTube Music'], ['artist', 'Artist'], ['track', 'Track title']],
-  },
-  crunchyroll: {
-    icon: 'assets/services/crunchyroll.svg',
-    description: 'Anime, series, and movies',
-    statuses: [['app', 'Crunchyroll'], ['series', 'Series'], ['episode', 'Episode']],
   },
   movies67: {
     icon: 'assets/services/movies67.svg',
@@ -52,15 +43,23 @@ const discordStatus = document.getElementById('discord-status');
 const firefoxOAuthRedirect = document.getElementById('firefox-oauth-redirect');
 let firefoxOAuthRedirectUrl = '';
 const activeServiceIcon = document.getElementById('active-service-icon');
+const serviceGrid = document.querySelector('.service-grid');
+const activitySettingsSection = document.getElementById('activity-settings-section');
+const activitySettings = document.getElementById('activity-settings');
 let lastState = null;
 let formHasLoaded = false;
 let saveTimer = 0;
+let installedActivities = [];
 
 function sourceIcon(track) {
+  if (track?.activityId) {
+    return installedActivities.find((activity) => activity.id === track.activityId)?.icon || 'icons/icon32.png';
+  }
   return serviceUi[track?.source]?.icon || 'icons/icon32.png';
 }
 
 function sourceName(track) {
+  if (track?.activityName) return track.activityName;
   if (track?.source === 'movies67') return '67Movies';
   if (track?.source === 'crunchyroll') return 'Crunchyroll';
   if (track?.source === 'youtube') {
@@ -68,7 +67,6 @@ function sourceName(track) {
     if (track.live || track.kind === 'live') return 'YouTube Live';
     return 'YouTube';
   }
-  if (track?.source === 'youtubeMusic') return 'YouTube Music';
   if (track?.source === 'twitch') return track.live || track.kind === 'live' ? 'Twitch Live' : 'Twitch';
   if (track?.source === 'kick') return track.live || track.kind === 'live' ? 'Kick Live' : 'Kick';
   return 'Playback';
@@ -131,6 +129,146 @@ function updateServiceStates(settings) {
     document.querySelector(`.service-tile[data-service="${source}"]`)?.classList.toggle('enabled', enabled);
     document.querySelector(`.service-tile[data-service="${source}"]`)?.classList.toggle('disabled', !enabled);
     document.querySelector(`.service-settings-card[data-service="${source}"]`)?.classList.toggle('is-disabled', !enabled);
+  }
+}
+
+function activityExtensionMessage(message) {
+  return chrome.runtime.sendMessage(message).then((response) => {
+    if (!response?.ok) throw new Error(response?.error || 'Could not update the Activity.');
+    return response.result;
+  });
+}
+
+function renderInstalledActivityTiles() {
+  serviceGrid.querySelectorAll('[data-activity-id]').forEach((tile) => tile.remove());
+  for (const activity of installedActivities) {
+    const tile = document.createElement('button');
+    tile.type = 'button';
+    tile.className = `service-tile activity-service-tile ${activity.enabled ? 'enabled' : 'disabled'}`;
+    tile.dataset.activityId = activity.id;
+    tile.setAttribute('aria-label', `${activity.name}, ${activity.enabled ? 'enabled' : 'disabled'}. Open settings.`);
+    const icon = document.createElement('img');
+    icon.src = activity.icon || 'icons/icon32.png';
+    icon.alt = '';
+    const copy = document.createElement('span');
+    const name = document.createElement('strong');
+    name.textContent = activity.name;
+    const status = document.createElement('small');
+    status.textContent = activity.enabled ? 'Installed Activity' : 'Activity disabled';
+    copy.append(name, status);
+    tile.append(icon, copy, document.createElement('i'));
+    tile.addEventListener('click', () => showActivitySettings(activity.id));
+    serviceGrid.append(tile);
+  }
+}
+
+function renderInstalledActivitySettings() {
+  const openIds = new Set([...activitySettings.querySelectorAll('.service-settings-card[open]')]
+    .map((card) => card.dataset.activityId));
+  activitySettings.replaceChildren();
+  activitySettingsSection.hidden = installedActivities.length === 0;
+  const template = document.getElementById('service-settings-template');
+  for (const activity of installedActivities) {
+    const preferences = { ...DEFAULT_ACTIVITY_PREFERENCES, ...activity.preferences };
+    const card = template.content.firstElementChild.cloneNode(true);
+    card.dataset.activityId = activity.id;
+    card.open = openIds.has(activity.id);
+    card.querySelector('.service-summary-icon img').src = activity.icon || 'icons/icon32.png';
+    card.querySelector('.setting-copy strong').textContent = activity.name;
+    card.querySelector('.setting-copy small').textContent = activity.description || activity.matches.join(', ');
+    card.classList.toggle('is-disabled', !activity.enabled);
+
+    const master = card.querySelector('.service-master input');
+    master.checked = activity.enabled;
+    master.dataset.activityEnabled = activity.id;
+    master.setAttribute('aria-label', `Enable ${activity.name}`);
+    master.addEventListener('click', (event) => event.stopPropagation());
+
+    const labels = {
+      paused: 'Show while paused',
+      artwork: 'Artwork',
+      timestamps: 'Playback progress',
+      buttons: 'Action buttons',
+    };
+    for (const [settingType, preferenceName] of Object.entries({
+      paused: 'showPaused',
+      artwork: 'showArtwork',
+      timestamps: 'showTimestamps',
+      buttons: 'showButtons',
+    })) {
+      const input = card.querySelector(`[data-setting="${settingType}"]`);
+      input.checked = preferences[preferenceName];
+      input.dataset.activityPreference = preferenceName;
+      input.dataset.activityId = activity.id;
+      input.setAttribute('aria-label', `${labels[settingType]} for ${activity.name}`);
+    }
+
+    const statusSelect = card.querySelector('[data-setting="status"]');
+    const statusOptions = activity.id === 'crunchyroll'
+      ? [['app', 'Crunchyroll'], ['artist', 'Series'], ['track', 'Episode']]
+      : [['app', 'Activity name'], ['artist', 'Artist / creator'], ['track', 'Media title']];
+    for (const [value, label] of statusOptions) {
+      statusSelect.append(new Option(label, value));
+    }
+    statusSelect.value = preferences.statusDisplay;
+    statusSelect.dataset.activityPreference = 'statusDisplay';
+    statusSelect.dataset.activityId = activity.id;
+    statusSelect.setAttribute('aria-label', `Status text for ${activity.name}`);
+    activitySettings.append(card);
+  }
+}
+
+function showActivitySettings(id) {
+  showView('settings');
+  const card = [...activitySettings.querySelectorAll('.service-settings-card')]
+    .find((item) => item.dataset.activityId === id);
+  if (card) card.open = true;
+}
+
+async function refreshInstalledActivities() {
+  const state = await activityExtensionMessage({ type: 'ACTIVITY_LIBRARY_STATE' });
+  installedActivities = Array.isArray(state?.installed) ? state.installed : [];
+  renderInstalledActivityTiles();
+  renderInstalledActivitySettings();
+  activeServiceIcon.src = sourceIcon(lastState?.track);
+}
+
+async function updateActivityPreference(input) {
+  const { activityId, activityPreference } = input.dataset;
+  const value = input.type === 'checkbox' ? input.checked : input.value;
+  try {
+    await activityExtensionMessage({
+      type: 'ACTIVITY_SET_PREFERENCES',
+      id: activityId,
+      preferences: { [activityPreference]: value },
+    });
+    saveStatus.textContent = 'Saved';
+    saveStatus.classList.add('saved');
+    await refreshInstalledActivities();
+    await refresh();
+  } catch (error) {
+    saveStatus.textContent = error.message || 'Could not save';
+    saveStatus.classList.remove('saved');
+    await refreshInstalledActivities().catch(() => {});
+  }
+}
+
+async function updateActivityEnabled(input) {
+  const id = input.dataset.activityEnabled;
+  input.disabled = true;
+  try {
+    await activityExtensionMessage({ type: 'ACTIVITY_SET_ENABLED', id, enabled: input.checked });
+    await refreshInstalledActivities();
+    await refresh();
+    saveStatus.textContent = 'Saved';
+    saveStatus.classList.add('saved');
+  } catch (error) {
+    saveStatus.textContent = error.message || 'Could not update Activity';
+    saveStatus.classList.remove('saved');
+    await refreshInstalledActivities().catch(() => {});
+  } finally {
+    const current = activitySettings.querySelector(`[data-activity-enabled="${id}"]`);
+    if (current) current.disabled = false;
   }
 }
 
@@ -294,11 +432,19 @@ settingsTab.addEventListener('click', () => showView('settings'));
 document.getElementById('open-settings').addEventListener('click', () => showView('settings'));
 document.getElementById('manage-services').addEventListener('click', () => {
   showView('settings');
-  const firstService = document.querySelector('.service-settings-card');
+  const firstService = activitySettings.querySelector('.service-settings-card') || document.querySelector('.service-settings-card');
   if (firstService) firstService.open = true;
 });
 
 form.addEventListener('change', (event) => {
+  if (event.target.dataset.activityEnabled) {
+    updateActivityEnabled(event.target);
+    return;
+  }
+  if (event.target.dataset.activityPreference) {
+    updateActivityPreference(event.target);
+    return;
+  }
   if (!event.target.name) return;
   saveSettings().catch(() => {
     saveStatus.classList.remove('saved');
@@ -320,6 +466,7 @@ artEl.addEventListener('error', () => {
 
 if (location.hash === '#settings') showView('settings');
 refresh();
+refreshInstalledActivities().catch(() => {});
 refreshDiscordSetup();
 setInterval(() => {
   if (document.body.dataset.view === 'activity') refresh();

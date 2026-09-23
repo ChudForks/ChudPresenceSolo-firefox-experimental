@@ -1,5 +1,6 @@
 import { selectActivity } from './core/activity.js';
 import { ActivityRegistry } from './core/activity-registry.js';
+import { ActivityManager } from './core/activity-manager.js';
 import { createPresenceIntent } from './core/presence.js';
 import {
   applicationIdForSource,
@@ -14,6 +15,18 @@ import { presencePublisher } from './platform/presence-publisher.js';
 import { EXTENSION_NAME } from './core/branding.js';
 
 const activityRegistry = new ActivityRegistry();
+const activityManager = new ActivityManager({
+  onReport({ tabId, documentId, track }) {
+    activityRegistry.update(tabId, documentId, track);
+    schedulePublish();
+  },
+  onClear(activityId, tabId, documentId) {
+    const known = activityRegistry.clearActivity(activityId, tabId, documentId);
+    if (!known) return;
+    if (typeof tabId === 'number') clearActiveTab(tabId);
+    schedulePublish();
+  },
+});
 let activeTabId = null;
 let settings = { ...DEFAULT_SETTINGS };
 let delivery = presencePublisher.status();
@@ -36,7 +49,11 @@ async function loadSettings() {
 
 function currentTrack() {
   const eligible = new Map(
-    [...activityRegistry.tracks()].filter(([, track]) => isTrackAllowed(track, settings)),
+    [...activityRegistry.tracks()].filter(([, track]) => isTrackAllowed(
+      track,
+      settings,
+      track?.activityId ? activityManager.preferencesFor(track.activityId) : null,
+    )),
   );
   const selected = selectActivity(eligible, activeTabId);
   activeTabId = selected.tabId;
@@ -54,7 +71,11 @@ async function publishCurrentActivity({ closing = false } = {}) {
   const intent = createPresenceIntent(
     track,
     Date.now(),
-    presenceDetailsForSource(track?.source, settings),
+    presenceDetailsForSource(
+      track?.source,
+      settings,
+      track?.activityId ? activityManager.preferencesFor(track.activityId) : null,
+    ),
   );
   const applicationId = applicationIdForSource(track?.source, settings);
   delivery = await presencePublisher.publish(intent, applicationId, { closing });
@@ -111,6 +132,41 @@ function onDocumentGone(tabId, documentId, { closing = false } = {}) {
   publishCurrentActivity({ closing });
 }
 
+async function handleActivityLibraryMessage(message) {
+  if (message.type === 'ACTIVITY_LIBRARY_STATE') return activityManager.status();
+  if (message.type === 'ACTIVITY_INSTALL') return activityManager.install(message.activityPackage);
+  if (message.type === 'ACTIVITY_REMOVE') return { removed: await activityManager.remove(message.id) };
+  if (message.type === 'ACTIVITY_SET_ENABLED') {
+    const result = await activityManager.setEnabled(message.id, Boolean(message.enabled));
+    schedulePublish();
+    return result;
+  }
+  if (message.type === 'ACTIVITY_SET_PREFERENCES') {
+    const result = await activityManager.setPreferences(message.id, message.preferences);
+    schedulePublish();
+    return result;
+  }
+  if (message.type === 'ACTIVITY_RESTORE') return activityManager.restoreAll();
+  return null;
+}
+
+function handleUserScriptMessage(message, sender) {
+  return activityManager.handleUserScriptMessage(message, sender);
+}
+
+function registerUserScriptMessageListener() {
+  try {
+    const event = chrome.runtime.onUserScriptMessage;
+    if (event?.addListener && !event.hasListener?.(handleUserScriptMessage)) {
+      event.addListener(handleUserScriptMessage);
+    }
+  } catch {
+    // Firefox exposes this event only after the optional userScripts grant.
+  }
+}
+
+registerUserScriptMessageListener();
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const privilegedDiscordMessage = [
     'GET_DISCORD_SETUP',
@@ -121,6 +177,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (privilegedDiscordMessage && !sentByExtensionPage) {
     sendResponse({ ok: false, error: 'Discord account controls are only available on extension pages.' });
     return false;
+  }
+
+  const libraryMessage = [
+    'ACTIVITY_LIBRARY_STATE',
+    'ACTIVITY_INSTALL',
+    'ACTIVITY_REMOVE',
+    'ACTIVITY_SET_ENABLED',
+    'ACTIVITY_SET_PREFERENCES',
+    'ACTIVITY_RESTORE',
+  ].includes(message?.type);
+  if (libraryMessage) {
+    if (!sentByExtensionPage) {
+      sendResponse({ ok: false, error: 'Activity controls are only available on extension pages.' });
+      return false;
+    }
+    handleActivityLibraryMessage(message)
+      .then((result) => sendResponse({ ok: true, result }))
+      .catch((error) => sendResponse({ ok: false, error: error.message || 'Could not update the Activity Library.' }));
+    return true;
   }
 
   if (message?.type === 'TRACK_UPDATE') {
@@ -228,6 +303,24 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   });
 });
 
+chrome.runtime.onStartup.addListener(() => {
+  activityManager.restoreAll().catch(() => {});
+});
+
+chrome.permissions?.onRemoved?.addListener(() => {
+  activityManager.restoreAll().catch(() => {});
+});
+
+chrome.permissions?.onAdded?.addListener(() => {
+  registerUserScriptMessageListener();
+  activityManager.restoreAll().catch(() => {});
+});
+
+setInterval(() => {
+  activityManager.pruneStale().catch(() => {});
+}, 5_000);
+
 Promise.all([loadSettings(), presencePublisher.initialize()]).then(() => {
   delivery = presencePublisher.status();
+  activityManager.restoreAll().catch(() => {});
 });

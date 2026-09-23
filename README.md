@@ -1,9 +1,10 @@
 # ChudPresence Solo — Firefox Experimental
 
 This is an independent Firefox fork of ChudPresence Solo. The original Chromium
-repository has not been changed. It detects playback on YouTube, YouTube Music,
-Crunchyroll, 67Movies, Twitch, and Kick, previews that activity in its popup, and
-can experimentally publish it to Discord.
+repository has not been changed. It detects playback on YouTube, 67Movies,
+Twitch, and Kick with packaged providers. YouTube Music and Crunchyroll are
+independently installable Activities in the Activity Library. The extension
+previews activity in its popup and can experimentally publish it to Discord.
 
 > Discord's Headless Sessions API is undocumented and may change or stop working.
 > This build uses Discord OAuth with PKCE and never requests an account token.
@@ -12,8 +13,17 @@ can experimentally publish it to Discord.
 
 1. Run `npm run build`, or use the unpacked `extension` directory while developing.
 2. Open `about:debugging#/runtime/this-firefox`.
-3. Select **Load Temporary Add-on** and choose `extension/manifest.json` or use build.bat and use the built xpi.
-4. Select **Connect**, then play something on a supported site.
+3. Select **Load Temporary Add-on** and choose `extension/manifest.json`.
+4. Open the add-on's panel. In Settings, copy the **Register Firefox callback**
+   value shown under Discord connection.
+5. In the Discord Developer Portal for client ID `1549066134706323548`, add that
+   exact value to the application's OAuth2 Redirects and ensure **Public Client**
+   is enabled. This is a one-time developer-portal configuration step; the fork
+   does not modify the existing Chromium redirect or original extension.
+6. Select **Connect**, then play something on a supported site.
+7. Open **Activity Library** from the popup and install YouTube Music or
+   Crunchyroll. Firefox asks separately for isolated user-script support and
+   access to the selected service's website.
 
 Firefox derives the callback from the add-on at runtime via
 `identity.getRedirectURL()`. The manifest pins this experimental add-on ID, so the
@@ -36,6 +46,11 @@ expires. Normal disconnects and playback stops also clear the session.
 Its Manifest V3 background is a Firefox module background script, so Firefox runs
 the persistent background page. This fork requires Firefox 142 or later.
 
+The Activity Library requests Firefox's optional `userScripts` permission and
+only the specific HTTPS site patterns selected in an Activity's metadata. New
+site access is requested when the user installs an Activity. Installed scripts
+are restored after browser startup and extension updates.
+
 ## Privacy and data transmission
 
 ChudPresence Solo reads playback metadata only on the supported services. After a
@@ -44,6 +59,14 @@ service, media title, creator or artist, playback state, optional artwork URL, a
 optional link to Discord to publish the requested presence. Discord OAuth tokens
 and extension settings are stored in Firefox's extension storage. They are never
 exposed to page scripts or sent to the supported streaming services.
+
+The Activity Library fetches the catalog and selected Activity source files from
+the public `ChudForks/ChudPresence-Activities` repository. Installed Activity source and
+metadata are stored locally so they continue to work offline. An Activity can
+read pages only on the sites the user approved and send normalized reports to
+the extension; it does not receive Discord credentials or extension storage
+access. Removing an Activity deletes its stored source and unregisters its
+script. See [the Activity API guide](extension/ACTIVITY_API.md).
 
 The 67Movies integration also asks The Movie Database (TMDB) for metadata using
 the movie or TV identifier in the current page URL. No analytics, advertising,

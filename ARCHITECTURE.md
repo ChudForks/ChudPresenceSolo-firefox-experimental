@@ -1,6 +1,6 @@
 # Architecture
 
-ChudPresence Solo is one Manifest V3 Chromium extension. It has no localhost
+ChudPresence Solo is one Firefox Manifest V3 extension. It has no localhost
 server, native process, installer, autostart entry, or bundled runtime.
 
 ## Layered flow
@@ -9,15 +9,15 @@ The project follows the shape of the proposed PreMiD-style pipeline while
 keeping detection separate from Discord delivery:
 
 ```text
-YouTube / YouTube Music / Crunchyroll / 67Movies / Twitch / Kick
-                         |
-                         v
-              provider content scripts
-                         |
-                  TRACK_UPDATE message
-                         |
-                         v
-           activity broker (select one tab)
+Packaged providers                Installed Activities
+(YouTube, 67Movies,               (YouTube Music,
+ Twitch, Kick)                     Crunchyroll, community)
+          |                                      | userScripts API
+          | TRACK_UPDATE                         | ActivityReport v1
+          +------------------+-------------------+
+                             |
+                             v
+                activity broker (select one tab)
                     /             \
                    v               v
              popup preview   presence intent mapper
@@ -35,7 +35,7 @@ YouTube / YouTube Music / Crunchyroll / 67Movies / Twitch / Kick
 This gives the extension a stable internal contract that resembles:
 
 ```text
-site -> extension activity -> Discord-ready activity -> connection -> Rich Presence
+site -> packaged provider or installed Activity -> activity registry -> Discord-ready intent -> publisher
 ```
 
 It does **not** model OAuth tokens as a presence transport. Authentication and
@@ -70,8 +70,19 @@ the bot's presence, not the authenticated user's presence.
 
 ## Module ownership
 
-- `extension/content.js`, `youtube.js`, `crunchyroll.js`, `movies67.js`, `twitch.js`, and `kick.js` are
-  provider adapters. They observe a page and emit normalized tracks.
+- `extension/youtube.js`, `movies67.js`, `twitch.js`, and `kick.js` are
+  packaged provider adapters. YouTube Music and Crunchyroll are independently
+  installed Activities under `ChudPresence-Activities/`.
+- `extension/core/activity-validator.js` defines Activity API v1 and validates
+  metadata, source size, and every normalized report.
+- `extension/core/activity-manager.js` registers isolated Firefox user scripts,
+  restores installations, and manages enable/disable/remove state.
+- `extension/core/activity-repository.js` reads the GitHub catalog and verifies
+  package hashes. `extension/core/activity-permissions.js` requests only the
+  user-script permission and HTTPS origins needed for an installation.
+- `extension/activities.*` provides Discover, Installed, Updates, and Developer
+  views. `ChudPresence-Activities/` contains the publish-ready repository
+  scaffold and catalog generator.
 - `extension/core/activity.js` selects one reportable track across browser tabs.
 - `extension/core/presence.js` converts that track to a transport-neutral,
   Discord-shaped presence intent. It owns text limits, safe external URLs,
@@ -98,6 +109,11 @@ Provider tracks may contain `source`, `kind`, `title`, `artist`, `album`,
 `artwork`, `url`, `channelUrl`, `playing`, `idle`, `ad`, `live`, `position`, and
 `duration`. Consumers tolerate missing optional fields.
 
+Installed Activities send only Activity API v1 reports over Firefox's dedicated
+user-script messaging event. The core assigns the Activity ID from its isolated
+world registration; a message cannot claim another Activity's identity.
+Activities never run in the extension background or receive Discord credentials.
+
 The publisher accepts a presence intent plus the active service's fixed Discord
 application ID, or `null` to clear the presence. The OAuth application owns the
 single shared Discord login; service IDs identify the displayed activity. The
@@ -107,12 +123,9 @@ publisher returns a delivery status with `id`, `available`,
 ## Reliability boundary
 
 The extension explicitly clears activity during normal pause, disable, and logout
-flows. While a Headless Session is active, an extension-owned offscreen document
-also holds a Chrome `fetchLater()` request containing the current session and
-access tokens in memory. Chrome activates that request when the document is
-destroyed during a normal browser shutdown. Credentials never enter a provider
-content script or page context. If deferred fetch is unavailable, the browser is
-killed, or the cleanup request cannot reach Discord, Discord's approximately
-20-minute Headless Session expiry remains the cleanup fallback. A ten-minute
-extension alarm renews an active session and replaces the deferred cleanup request
-with fresh credentials while the browser remains available.
+flows. If a supported tab or window closes, the broker drops that document's
+report and selects the next active tab. Firefox does not provide Chrome's
+`fetchLater()` or offscreen-document APIs, so Discord session cleanup on normal
+shutdown uses a best-effort `fetch(..., { keepalive: true })` request. A browser
+crash or forced termination can leave a session until Discord expires it. A
+ten-minute extension alarm renews active sessions while Firefox is running.

@@ -105,25 +105,11 @@
     const snapshot = playerSnapshot();
     if (snapshot.videoId) return snapshot.videoId;
 
-    try {
-      const musicPlayer = document.querySelector('ytmusic-player');
-      const fromAttr = musicPlayer?.getAttribute?.('video-id') || musicPlayer?.videoId || '';
-      if (fromAttr) return fromAttr;
-      const id = musicPlayer?.playerApi_?.getPlayerResponse?.()?.videoDetails?.videoId;
-      if (id) return id;
-    } catch {
-      // Internal Polymer fields change between YouTube Music versions.
-    }
-
     const flexy = document.querySelector('ytd-watch-flexy');
     const fromFlexy = flexy?.getAttribute?.('video-id');
     if (fromFlexy) return fromFlexy;
 
-    const bar = document.querySelector('ytmusic-player-bar');
     const hrefs = [
-      bar?.querySelector('a.yt-simple-endpoint[href*="watch"]')?.href,
-      bar?.querySelector('.title')?.closest('a')?.href,
-      bar?.querySelector('a[href*="watch"]')?.href,
       document.querySelector('link[rel="canonical"]')?.href,
       document.querySelector('a.ytp-title-link')?.href,
     ];
@@ -133,7 +119,7 @@
     }
 
     const thumbs = document.querySelectorAll(
-      'ytmusic-player-bar img, ytmusic-player img, img.ytmusic-player-bar, #movie_player .ytp-cued-thumbnail-overlay-image, ytd-video-owner-renderer img',
+      '#movie_player .ytp-cued-thumbnail-overlay-image, ytd-video-owner-renderer img',
     );
     for (const img of thumbs) {
       const id = videoIdFromThumb(img.currentSrc || img.src || img.style?.backgroundImage);

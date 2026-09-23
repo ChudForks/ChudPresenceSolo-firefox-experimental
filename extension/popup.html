@@ -63,8 +63,6 @@
         </div>
         <div class="service-grid">
           <article class="service-tile" data-service="youtube"><img src="assets/services/youtube.svg" alt="" /><span><strong>YouTube</strong><small>Videos &amp; live</small></span><i></i></article>
-          <article class="service-tile" data-service="youtubeMusic"><img src="assets/services/youtube-music.svg" alt="" /><span><strong>YT Music</strong><small>Music</small></span><i></i></article>
-          <article class="service-tile" data-service="crunchyroll"><img src="assets/services/crunchyroll.svg" alt="" /><span><strong>Crunchyroll</strong><small>Anime</small></span><i></i></article>
           <article class="service-tile" data-service="movies67"><img src="assets/services/movies67.svg" alt="" /><span><strong>67Movies</strong><small>Movies &amp; TV</small></span><i></i></article>
           <article class="service-tile" data-service="twitch"><img src="assets/services/twitch.svg" alt="" /><span><strong>Twitch</strong><small>Streams &amp; VODs</small></span><i></i></article>
           <article class="service-tile" data-service="kick"><img src="assets/services/kick.svg" alt="" /><span><strong>Kick</strong><small>Streams &amp; VODs</small></span><i></i></article>
@@ -82,6 +80,11 @@
         <span><strong>Personalize your presence</strong><small>Per-service artwork, timers, buttons, and more</small></span>
         <svg class="chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="m7 4 6 6-6 6"/></svg>
       </button>
+      <a class="settings-cta" href="activities.html" target="_blank" rel="noopener">
+        <span class="cta-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 5.5v15A2.5 2.5 0 0 1 6.5 18H20M8 7h8M8 10h8"/></svg></span>
+        <span><strong>Activity Library</strong><small>Discover and manage website Activities</small></span>
+        <svg class="chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="m7 4 6 6-6 6"/></svg>
+      </a>
     </main>
 
     <main class="panel-view settings-view" id="settings-view" aria-labelledby="settings-title" hidden>
@@ -108,12 +111,17 @@
             optional link to Discord. Disable sharing, disable a service, or Disconnect
             at any time. The optional 67Movies service sends its media identifier to
             TMDB for title and artwork lookup; disable that service to stop those
-            lookups. It never sends these details back to the streaming site.
+            lookups. Installed Activities can observe only the sites you grant and
+            send validated playback reports to ChudPresence.
           </div>
         </section>
 
         <div class="settings-label"><span>Services</span><small>Tap a service for details</small></div>
         <div id="service-settings"></div>
+        <div id="activity-settings-section" hidden>
+          <div class="settings-label"><span>Installed Activities</span><small>Activity-specific presence controls</small></div>
+          <div id="activity-settings"></div>
+        </div>
 
         <section class="privacy-note">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-3.7 8-10V5l-8-3-8 3v7c0 6.3 8 10 8 10Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg>

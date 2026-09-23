@@ -8,7 +8,6 @@ const SOURCE_LABELS = Object.freeze({
   twitch: 'Twitch',
   kick: 'Kick',
   youtube: 'YouTube',
-  youtubeMusic: 'YouTube Music',
 });
 
 function cleanText(value, maxLength = MAX_TEXT_LENGTH) {
@@ -28,11 +27,11 @@ function safeUrl(value) {
 }
 
 function sourceLabel(track) {
-  return SOURCE_LABELS[track?.source] || EXTENSION_NAME;
+  return track?.activityName || SOURCE_LABELS[track?.source] || EXTENSION_NAME;
 }
 
 function activityType(track) {
-  return track?.kind === 'song' || track?.source === 'youtubeMusic' ? 'listening' : 'watching';
+  return track?.kind === 'song' ? 'listening' : 'watching';
 }
 
 function timestamps(track, nowMs) {
@@ -59,15 +58,7 @@ function withMarkers(value, markers, fallback) {
 }
 
 function withPlaybackState(value, track, fallback) {
-  return withMarkers(value, track?.playing ? [] : ['Paused'], fallback);
-}
-
-function searchUrl(query) {
-  const text = cleanText(query);
-  if (!text) return '';
-  const url = new URL('https://music.youtube.com/search');
-  url.searchParams.set('q', text);
-  return url.toString();
+  return withMarkers(value, track?.playing === false ? ['Paused'] : [], fallback);
 }
 
 function siteUrl(value) {
@@ -80,20 +71,6 @@ function layoutFor(track) {
   const provider = sourceLabel(track);
   const activityUrl = safeUrl(track.url);
   const channelUrl = safeUrl(track.channelUrl);
-
-  if (track.source === 'youtubeMusic') {
-    const artistUrl = searchUrl(track.artist);
-    return {
-      details: cleanText(track.title),
-      state: withPlaybackState(track.artist, track, provider),
-      largeText: cleanText(track.album || track.title || provider),
-      buttons: [
-        activityUrl && { label: 'Play on YouTube Music', url: activityUrl },
-        artistUrl && { label: 'Search artist', url: artistUrl },
-      ],
-      statusFields: { app: 'name', artist: 'state', track: 'details' },
-    };
-  }
 
   if (track.source === 'youtube') {
     const live = track.live || track.kind === 'live';
@@ -125,14 +102,16 @@ function layoutFor(track) {
       details: movie ? episodeTitle : series,
       state: withPlaybackState(movie ? provider : track.album || episodeTitle, track, provider),
       largeText: movie ? episodeTitle : episodeTitle || track.album || provider,
-      buttons: [
-        activityUrl && {
-          label: movie ? 'Watch movie' : 'Watch on Crunchyroll',
-          url: activityUrl,
-        },
-        !movie && channelUrl && channelUrl !== activityUrl && { label: 'View series', url: channelUrl },
-      ],
-      statusFields: { app: 'name', series: 'details', episode: 'state' },
+      buttons: Array.isArray(track.buttons) && track.buttons.length
+        ? track.buttons
+        : [
+            activityUrl && {
+              label: movie ? 'Watch movie' : 'Watch on Crunchyroll',
+              url: activityUrl,
+            },
+            !movie && channelUrl && channelUrl !== activityUrl && { label: 'View series', url: channelUrl },
+          ],
+      statusFields: { app: 'name', artist: 'details', track: 'state', series: 'details', episode: 'state' },
     };
   }
 
@@ -194,11 +173,13 @@ function layoutFor(track) {
   }
 
   return {
-    details: cleanText(track.title),
-    state: withPlaybackState(track.artist || track.album, track, provider),
-    largeText: provider,
-    buttons: [activityUrl && { label: 'Open', url: activityUrl }],
-    statusFields: { app: 'name' },
+    details: cleanText(track.details || track.title),
+    state: withPlaybackState(track.state || track.artist || track.album, track, provider),
+    largeText: cleanText(track.album || track.details || provider),
+    buttons: Array.isArray(track.buttons) && track.buttons.length
+      ? track.buttons
+      : [activityUrl && { label: 'Open', url: activityUrl }],
+    statusFields: { app: 'name', artist: 'state', track: 'details' },
   };
 }
 

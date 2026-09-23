@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ChudPresence Solo — Experimental",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Experimental extension for sharing playback activity from supported streaming sites on Discord.",
   "icons": {
     "16": "icons/icon16.png",
@@ -26,7 +26,6 @@
   "content_scripts": [
     {
       "matches": [
-        "https://music.youtube.com/*",
         "https://www.youtube.com/*",
         "https://youtube.com/*"
       ],
@@ -35,34 +34,9 @@
       "world": "MAIN"
     },
     {
-      "matches": ["https://music.youtube.com/*"],
-      "js": ["content.js"],
-      "run_at": "document_idle"
-    },
-    {
       "matches": ["https://www.youtube.com/*", "https://youtube.com/*"],
       "js": ["youtube.js"],
       "run_at": "document_idle"
-    },
-    {
-      "matches": [
-        "https://www.crunchyroll.com/*",
-        "https://crunchyroll.com/*",
-        "https://beta.crunchyroll.com/*"
-      ],
-      "js": ["crunchyroll.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": [
-        "https://www.crunchyroll.com/*",
-        "https://crunchyroll.com/*",
-        "https://beta.crunchyroll.com/*",
-        "https://static.crunchyroll.com/*"
-      ],
-      "js": ["crunchyroll-player.js"],
-      "run_at": "document_idle",
-      "all_frames": true
     },
     {
       "matches": ["https://67movies.st/*", "https://www.67movies.st/*"],
@@ -81,6 +55,8 @@
     }
   ],
   "permissions": ["alarms", "identity", "storage"],
+  "optional_permissions": ["userScripts"],
+  "optional_host_permissions": ["https://*/*"],
   "host_permissions": [
     "https://discord.com/api/*",
     "https://discord.com/oauth2/*"

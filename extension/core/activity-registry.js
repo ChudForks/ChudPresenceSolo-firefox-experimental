@@ -37,6 +37,20 @@ export class ActivityRegistry {
     return true;
   }
 
+  clearActivity(activityId, tabId = null, documentId = null) {
+    let cleared = false;
+    for (const [currentTabId, entry] of this.entries) {
+      if (typeof tabId === 'number' && currentTabId !== tabId) continue;
+      if (entry.track?.activityId !== activityId) continue;
+      const owner = entry.documentId;
+      const closing = normalizeDocumentId(documentId);
+      if (owner && closing && owner !== closing) continue;
+      this.entries.delete(currentTabId);
+      cleared = true;
+    }
+    return cleared;
+  }
+
   clearTab(tabId) {
     return this.entries.delete(tabId);
   }

@@ -21,17 +21,13 @@ test('filters disabled sources', () => {
     ...DEFAULT_SETTINGS,
     sourceYouTube: false,
   }), false);
-  assert.equal(isTrackAllowed({ source: 'crunchyroll', playing: true }, DEFAULT_SETTINGS), true);
+  assert.equal(isTrackAllowed({ source: 'crunchyroll', activityId: 'crunchyroll', playing: true }, DEFAULT_SETTINGS), true);
 });
 
 test('filters paused tracks only when configured', () => {
-  const paused = { source: 'youtubeMusic', playing: false };
-  assert.equal(isTrackAllowed(paused, DEFAULT_SETTINGS), true);
-  assert.equal(isTrackAllowed(paused, { ...DEFAULT_SETTINGS, youtubeMusicShowPaused: false }), false);
-  assert.equal(isTrackAllowed(
-    { source: 'youtube', playing: false },
-    { ...DEFAULT_SETTINGS, youtubeMusicShowPaused: false },
-  ), true);
+  const paused = { source: 'crunchyroll', activityId: 'crunchyroll', playing: false };
+  assert.equal(isTrackAllowed(paused, DEFAULT_SETTINGS, { showPaused: true }), true);
+  assert.equal(isTrackAllowed(paused, DEFAULT_SETTINGS, { showPaused: false }), false);
 });
 
 test('migrates legacy global presence preferences to every service', () => {
@@ -42,7 +38,7 @@ test('migrates legacy global presence preferences to every service', () => {
     showButtons: false,
   });
 
-  for (const prefix of ['youtube', 'youtubeMusic', 'crunchyroll', 'movies67', 'twitch', 'kick']) {
+  for (const prefix of ['youtube', 'movies67', 'twitch', 'kick']) {
     assert.equal(normalized[`${prefix}ShowPaused`], false);
     assert.equal(normalized[`${prefix}ShowArtwork`], false);
     assert.equal(normalized[`${prefix}ShowTimestamps`], true);
@@ -54,7 +50,6 @@ test('uses presence details and hard-coded application IDs for the active servic
   const settings = {
     ...DEFAULT_SETTINGS,
     youtubeShowArtwork: false,
-    crunchyrollShowButtons: false,
   };
 
   assert.equal(applicationIdForSource('youtube', settings), SERVICE_APPLICATION_IDS.youtube);
@@ -67,28 +62,35 @@ test('uses presence details and hard-coded application IDs for the active servic
     showTimestamps: true,
     showButtons: true,
   });
-  assert.deepEqual(presenceDetailsForSource('crunchyroll', settings), {
-    statusDisplay: 'app',
-    showArtwork: true,
-    showTimestamps: true,
-    showButtons: false,
-  });
 });
 
 test('normalizes and selects each service status display preference', () => {
   const settings = normalizeSettings({
     youtubeStatusDisplay: 'creator',
-    youtubeMusicStatusDisplay: 'track',
-    crunchyrollStatusDisplay: 'episode',
     movies67StatusDisplay: 'invalid',
     twitchStatusDisplay: 'streamer',
     kickStatusDisplay: 'stream',
   });
 
   assert.equal(presenceDetailsForSource('youtube', settings).statusDisplay, 'creator');
-  assert.equal(presenceDetailsForSource('youtubeMusic', settings).statusDisplay, 'track');
-  assert.equal(presenceDetailsForSource('crunchyroll', settings).statusDisplay, 'episode');
   assert.equal(presenceDetailsForSource('movies67', settings).statusDisplay, 'app');
   assert.equal(presenceDetailsForSource('twitch', settings).statusDisplay, 'streamer');
   assert.equal(presenceDetailsForSource('kick', settings).statusDisplay, 'stream');
+});
+
+test('applies installed Activity preferences to paused filtering and presence details', () => {
+  const track = { activityId: 'sample-activity', source: 'sample-activity', playing: false };
+  assert.equal(isTrackAllowed(track, DEFAULT_SETTINGS, { showPaused: false }), false);
+  assert.equal(isTrackAllowed(track, DEFAULT_SETTINGS, { showPaused: true }), true);
+  assert.deepEqual(presenceDetailsForSource('sample-activity', DEFAULT_SETTINGS, {
+    statusDisplay: 'track',
+    showArtwork: false,
+    showTimestamps: false,
+    showButtons: false,
+  }), {
+    statusDisplay: 'track',
+    showArtwork: false,
+    showTimestamps: false,
+    showButtons: false,
+  });
 });

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Activity Library · ChudPresence</title>
+    <link rel="stylesheet" href="activities.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="popup.html" aria-label="ChudPresence home">
+        <img src="icons/icon48.png" alt="" />
+        <span><strong>ChudPresence</strong><small>Activity Library</small></span>
+      </a>
+      <div class="header-status"><i id="status-dot"></i><span id="page-status" role="status">Loading installed Activities…</span></div>
+    </header>
+
+    <main class="shell">
+      <section class="hero">
+        <div><span class="eyebrow">Community extensions for ChudPresence</span><h1>Activity Library</h1>
+          <p>Install small, isolated website observers. ChudPresence keeps control of your Discord presence.</p>
+        </div>
+        <button class="button secondary" id="refresh-catalog" type="button">Refresh catalog</button>
+      </section>
+
+      <nav class="tabs" aria-label="Activity Library sections">
+        <button class="tab is-active" data-view="discover" type="button">Discover</button>
+        <button class="tab" data-view="installed" type="button">Installed <span id="installed-count">0</span></button>
+        <button class="tab" data-view="updates" type="button">Updates <span id="update-count">0</span></button>
+        <button class="tab" data-view="developer" type="button">Developer</button>
+      </nav>
+
+      <section class="view" id="discover-view" aria-labelledby="discover-title">
+        <div class="view-heading"><div><span class="eyebrow">Browse</span><h2 id="discover-title">Discover Activities</h2></div><span class="muted" id="catalog-age"></span></div>
+        <div class="filters">
+          <label class="search"><span class="visually-hidden">Search Activities</span><input id="search" type="search" placeholder="Search Activities…" autocomplete="off" /></label>
+          <label class="category-filter"><span class="visually-hidden">Filter by category</span><select id="category-filter"><option value="all">All categories</option></select></label>
+        </div>
+        <div class="notice" id="catalog-notice" role="status">Connect to the GitHub catalog to discover Activities.</div>
+        <div class="card-grid" id="discover-list"></div>
+      </section>
+
+      <section class="view" id="installed-view" aria-labelledby="installed-title" hidden>
+        <div class="view-heading"><div><span class="eyebrow">On this browser</span><h2 id="installed-title">Installed Activities</h2></div></div>
+        <div class="card-grid" id="installed-list"></div>
+      </section>
+
+      <section class="view" id="updates-view" aria-labelledby="updates-title" hidden>
+        <div class="view-heading"><div><span class="eyebrow">Manual updates</span><h2 id="updates-title">Updates</h2></div></div>
+        <div class="card-grid" id="updates-list"></div>
+      </section>
+
+      <section class="view" id="developer-view" aria-labelledby="developer-title" hidden>
+        <div class="view-heading"><div><span class="eyebrow">For Activity authors</span><h2 id="developer-title">Developer Mode</h2></div></div>
+        <label class="developer-toggle"><span><strong>Enable developer tools</strong><small>Show local Activity loading controls on this browser.</small></span><input id="developer-enabled" type="checkbox" /></label>
+        <div class="developer-panel" id="developer-panel" hidden>
+          <p>Select an Activity's <code>metadata.json</code> and <code>activity.js</code> together. Add <code>icon.png</code> if its metadata declares an icon. Local Activities stay on this device.</p>
+          <label class="file-picker">Activity files<input id="local-files" type="file" accept=".json,.js,.png,application/json,text/javascript,image/png" multiple /></label>
+          <div class="selected-files" id="selected-files">Choose both required files to continue.</div>
+          <button class="button primary" id="load-local" type="button" disabled>Load local Activity</button>
+          <div class="notice" id="developer-notice" role="status"></div>
+        </div>
+        <div class="developer-guide">
+          <h3>Activity API v1</h3>
+          <p>Scripts run in an isolated Firefox <code>USER_SCRIPT</code> world and can only send normalized reports through <code>ChudPresence.report()</code>.</p>
+          <pre><code>ChudPresence.report({
+  title: "Episode title",
+  artist: "Series name",
+  url: location.href,
+  playing: true,
+  position: 120,
+  duration: 1440,
+  kind: "episode"
+});</code></pre>
+          <a href="ACTIVITY_API.md" target="_blank" rel="noopener">Read the Activity API guide</a>
+        </div>
+      </section>
+
+      <footer class="trust-note">
+        <strong>Review before installing</strong>
+        <span>Activities can read pages on the sites you approve. They run separately from ChudPresence and Discord credentials; each Activity report is checked by the extension.</span>
+      </footer>
+    </main>
+    <script type="module" src="activities.js"></script>
+  </body>
+</html>
