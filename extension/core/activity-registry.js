@@ -20,7 +20,8 @@ export class ActivityRegistry {
     return true;
   }
 
-  heartbeat(tabId, documentId) {
+  heartbeat(tabId, documentId, track = null) {
+    if (track && typeof tabId === 'number') return this.update(tabId, documentId, track);
     if (typeof tabId !== 'number' || this.entries.has(tabId)) return false;
     return this.update(tabId, documentId, { idle: true });
   }

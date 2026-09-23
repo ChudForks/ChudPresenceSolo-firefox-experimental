@@ -15,6 +15,7 @@ import { presencePublisher } from './platform/presence-publisher.js';
 import { EXTENSION_NAME } from './core/branding.js';
 
 const activityRegistry = new ActivityRegistry();
+const ACTIVITY_PRUNE_ALARM = 'activity-prune-stale';
 const activityManager = new ActivityManager({
   onReport({ tabId, documentId, track }) {
     activityRegistry.update(tabId, documentId, track);
@@ -214,7 +215,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.type === 'HEARTBEAT') {
     const tabId = sender.tab?.id;
-    activityRegistry.heartbeat(tabId, sender.documentId);
+    activityRegistry.heartbeat(tabId, sender.documentId, message.track);
     schedulePublish();
     sendResponse({ ok: true });
     return false;
@@ -263,6 +264,9 @@ chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== 'presence') return;
   const tabId = port.sender?.tab?.id;
   const documentId = port.sender?.documentId;
+  if (typeof tabId === 'number' && !activityRegistry.has(tabId)) {
+    chrome.tabs.sendMessage(tabId, { type: 'FORCE_TICK' }).catch(() => {});
+  }
   port.onDisconnect.addListener(() => {
     if (typeof tabId !== 'number') return;
     chrome.tabs.get(tabId)
@@ -297,6 +301,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === ACTIVITY_PRUNE_ALARM) {
+    activityManager.pruneStale().catch(() => {});
+    return;
+  }
   if (alarm.name !== 'discord-presence-renew') return;
   presencePublisher.renew().then((result) => {
     delivery = result;
@@ -316,9 +324,7 @@ chrome.permissions?.onAdded?.addListener(() => {
   activityManager.restoreAll().catch(() => {});
 });
 
-setInterval(() => {
-  activityManager.pruneStale().catch(() => {});
-}, 5_000);
+chrome.alarms.create(ACTIVITY_PRUNE_ALARM, { delayInMinutes: 0.5, periodInMinutes: 0.5 });
 
 Promise.all([loadSettings(), presencePublisher.initialize()]).then(() => {
   delivery = presencePublisher.status();

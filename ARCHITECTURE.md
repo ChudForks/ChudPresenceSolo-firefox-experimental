@@ -73,8 +73,10 @@ the bot's presence, not the authenticated user's presence.
 - `extension/youtube.js`, `movies67.js`, `twitch.js`, and `kick.js` are
   packaged provider adapters. YouTube Music and Crunchyroll are independently
   installed Activities under `ChudPresence-Activities/`.
-- `extension/core/activity-validator.js` defines Activity API v1 and validates
-  metadata, source size, and every normalized report.
+- `extension/core/activity-validator.js` defines the latest Activity API version,
+  lists the versions still supported by the runtime, and validates metadata,
+  source size, and every normalized report. Catalog schema, metadata, and runtime
+  API versions remain separate concepts.
 - `extension/core/activity-manager.js` registers isolated Firefox user scripts,
   restores installations, and manages enable/disable/remove state.
 - `extension/core/activity-repository.js` reads the GitHub catalog and verifies
@@ -109,10 +111,11 @@ Provider tracks may contain `source`, `kind`, `title`, `artist`, `album`,
 `artwork`, `url`, `channelUrl`, `playing`, `idle`, `ad`, `live`, `position`, and
 `duration`. Consumers tolerate missing optional fields.
 
-Installed Activities send only Activity API v1 reports over Firefox's dedicated
-user-script messaging event. The core assigns the Activity ID from its isolated
-world registration; a message cannot claim another Activity's identity.
-Activities never run in the extension background or receive Discord credentials.
+Installed Activities send reports using a supported Activity API version over
+Firefox's dedicated user-script messaging event. The core assigns the Activity ID
+from its isolated world registration; a message cannot claim another Activity's
+identity. Activities never run in the extension background or receive Discord
+credentials.
 
 The publisher accepts a presence intent plus the active service's fixed Discord
 application ID, or `null` to clear the presence. The OAuth application owns the

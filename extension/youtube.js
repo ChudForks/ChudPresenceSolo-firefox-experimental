@@ -325,7 +325,7 @@ function tick() {
   const track = collect();
   const serialized = JSON.stringify(track);
   if (serialized === lastSerialized) {
-    chrome.runtime.sendMessage({ type: 'HEARTBEAT' }).catch(() => {});
+    chrome.runtime.sendMessage({ type: 'HEARTBEAT', track }).catch(() => {});
     return;
   }
   lastSerialized = serialized;

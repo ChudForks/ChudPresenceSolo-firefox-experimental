@@ -31,7 +31,28 @@ function sourceLabel(track) {
 }
 
 function activityType(track) {
-  return track?.kind === 'song' ? 'listening' : 'watching';
+  const declaredType = {
+    music: 'listening',
+    video: 'watching',
+    streaming: 'streaming',
+    generic: 'playing',
+  }[track?.presenceKind];
+  const kindType = track?.kind === 'song'
+    ? 'listening'
+    : track?.kind === 'stream' || track?.kind === 'live'
+      ? 'streaming'
+      : track?.kind === 'game' || track?.kind === 'generic'
+        ? 'playing'
+        : 'watching';
+  const requestedType = declaredType || kindType;
+  if (requestedType !== 'streaming') return requestedType;
+
+  const url = safeUrl(track?.url);
+  if (!url) return 'watching';
+  const hostname = new URL(url).hostname.toLowerCase();
+  return ['twitch.tv', 'www.twitch.tv', 'youtube.com', 'www.youtube.com'].includes(hostname)
+    ? 'streaming'
+    : 'watching';
 }
 
 function timestamps(track, nowMs) {
@@ -193,12 +214,14 @@ export function createPresenceIntent(track, nowMs = Date.now(), settings = {}) {
 
   const provider = sourceLabel(track);
   const layout = layoutFor(track);
+  const type = activityType(track);
   const artwork = settings.showArtwork === false ? '' : safeUrl(track.artwork);
   const statusDisplayType = layout.statusFields[settings.statusDisplay] || 'name';
 
   return {
     name: provider,
-    type: activityType(track),
+    type,
+    ...(type === 'streaming' ? { streamUrl: safeUrl(track.url) } : {}),
     details: layout.details,
     state: layout.state,
     statusDisplayType,

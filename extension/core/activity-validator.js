@@ -1,4 +1,7 @@
-export const ACTIVITY_API_VERSION = 1;
+export const LATEST_ACTIVITY_API_VERSION = 1;
+export const SUPPORTED_ACTIVITY_API_VERSIONS = Object.freeze([1]);
+// Keep the original export for callers that need to generate current metadata.
+export const ACTIVITY_API_VERSION = LATEST_ACTIVITY_API_VERSION;
 export const MAX_ACTIVITY_SOURCE_BYTES = 512 * 1024;
 export const MAX_ACTIVITY_REPORT_BYTES = 16 * 1024;
 export const MAX_ACTIVITY_ICON_BYTES = 256 * 1024;
@@ -8,6 +11,10 @@ const ACTIVITY_KINDS = new Set([
   'video', 'movie', 'episode', 'song', 'stream', 'game', 'generic',
 ]);
 const PRESENCE_KINDS = new Set(['music', 'video', 'streaming', 'generic']);
+
+export function isSupportedActivityApiVersion(version) {
+  return SUPPORTED_ACTIVITY_API_VERSIONS.includes(version);
+}
 const REPORT_STRING_LIMITS = Object.freeze({
   title: 256,
   artist: 256,
@@ -128,7 +135,7 @@ export function validateActivityMetadata(metadata) {
   if (!isSemanticVersion(metadata.version)) {
     fail('Activity version must use semantic version format (for example, 1.0.0).');
   }
-  if (metadata.apiVersion !== ACTIVITY_API_VERSION) {
+  if (!isSupportedActivityApiVersion(metadata.apiVersion)) {
     fail(`Activity API version ${metadata.apiVersion} is not supported.`);
   }
   if (!Array.isArray(metadata.matches) || metadata.matches.length < 1 || metadata.matches.length > 32) {
@@ -184,10 +191,10 @@ export function validateActivitySource(source) {
   return source;
 }
 
-export function normalizeActivityReport(report) {
+function normalizeActivityReportV1(report) {
   if (!isPlainObject(report)) fail('Activity report must be a JSON object.');
   const allowed = new Set([
-    ...Object.keys(REPORT_STRING_LIMITS), 'playing', 'position', 'duration', 'kind', 'buttons',
+    ...Object.keys(REPORT_STRING_LIMITS), 'playing', 'live', 'position', 'duration', 'kind', 'buttons',
   ]);
   for (const key of Object.keys(report)) {
     if (!allowed.has(key)) fail(`Activity report contains unsupported field ${key}.`);
@@ -213,6 +220,10 @@ export function normalizeActivityReport(report) {
   if (report.playing !== undefined) {
     if (typeof report.playing !== 'boolean') fail('playing must be a boolean.');
     normalized.playing = report.playing;
+  }
+  if (report.live !== undefined) {
+    if (typeof report.live !== 'boolean') fail('live must be a boolean.');
+    normalized.live = report.live;
   }
   for (const field of ['position', 'duration']) {
     if (report[field] === undefined) continue;
@@ -244,4 +255,17 @@ export function normalizeActivityReport(report) {
   const encoded = new TextEncoder().encode(JSON.stringify(normalized)).byteLength;
   if (encoded > MAX_ACTIVITY_REPORT_BYTES) fail('Activity report exceeds the 16 KB size limit.');
   return normalized;
+}
+
+const REPORT_NORMALIZERS = new Map([
+  [1, normalizeActivityReportV1],
+]);
+
+export function normalizeActivityReport(report, apiVersion = LATEST_ACTIVITY_API_VERSION) {
+  if (!isSupportedActivityApiVersion(apiVersion)) {
+    fail(`Activity API version ${apiVersion} is not supported.`);
+  }
+  const normalize = REPORT_NORMALIZERS.get(apiVersion);
+  if (!normalize) fail(`Activity API version ${apiVersion} has no report normalizer.`);
+  return normalize(report);
 }

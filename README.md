@@ -43,8 +43,10 @@ continue while Firefox tears down the initiating context. This is best effort: a
 browser crash or forced termination can still leave a Discord session until it
 expires. Normal disconnects and playback stops also clear the session.
 
-Its Manifest V3 background is a Firefox module background script, so Firefox runs
-the persistent background page. This fork requires Firefox 142 or later.
+Its Manifest V3 background is a Firefox module event page. Firefox may unload it
+when idle, so the extension reloads settings and installed Activities when it
+starts, and packaged providers include their current report in each heartbeat to
+recover playback state. This fork requires Firefox 142 or later.
 
 The Activity Library requests Firefox's optional `userScripts` permission and
 only the specific HTTPS site patterns selected in an Activity's metadata. New
@@ -65,8 +67,9 @@ the public `ChudForks/ChudPresence-Activities` repository. Installed Activity so
 metadata are stored locally so they continue to work offline. An Activity can
 read pages only on the sites the user approved and send normalized reports to
 the extension; it does not receive Discord credentials or extension storage
-access. Removing an Activity deletes its stored source and unregisters its
-script. See [the Activity API guide](extension/ACTIVITY_API.md).
+access. Removing an Activity deletes its stored source, unregisters its script,
+and releases site permissions no longer needed by another installed Activity.
+See [the Activity API guide](extension/ACTIVITY_API.md).
 
 The 67Movies integration also asks The Movie Database (TMDB) for metadata using
 the movie or TV identifier in the current page URL. No analytics, advertising,

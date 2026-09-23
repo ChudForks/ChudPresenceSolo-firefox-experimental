@@ -54,11 +54,18 @@ ChudPresence.report({
 
 Call `ChudPresence.clear()` when the page no longer has a reportable activity.
 Reports are validated and size-limited by the extension. Supported report
-fields are `title`, `artist`, `album`, `artwork`, `url`, `playing`, `position`,
-`duration`, `kind`, `details`, `state`, and up to two `{ label, url }` buttons.
-URLs must use HTTPS. Text fields are limited to 256 characters; buttons to two,
-with 32-character labels. Supported kinds are `video`, `movie`, `episode`,
-`song`, `stream`, `game`, and `generic`.
+fields are `title`, `artist`, `album`, `artwork`, `url`, `playing`, `live`,
+`position`, `duration`, `kind`, `details`, `state`, and up to two `{ label, url }`
+buttons. URLs must use HTTPS. Text fields are limited to 256 characters; buttons
+to two, with 32-character labels. Supported kinds are `video`, `movie`,
+`episode`, `song`, `stream`, `game`, and `generic`. The `live` boolean is
+independent of `kind`; use `kind: "stream"` with `live: true` for a live
+broadcast. Kinds map to Discord presence as follows: songs to Listening, videos,
+movies, and episodes to Watching, games and generic reports to Playing. Streams
+use Discord's Streaming type only for Twitch and YouTube URLs; other URLs map to
+Watching because Discord validates Streaming links against those services.
+Optional metadata `presence.kind` can override the mapping with `music`, `video`,
+`streaming`, or `generic`, subject to the same Streaming URL requirement.
 
 Activity code should report promptly when state changes and periodically while
 the page remains active. It should not call Discord, fetch unrelated services,

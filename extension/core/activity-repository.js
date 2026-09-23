@@ -1,5 +1,5 @@
 import {
-  ACTIVITY_API_VERSION,
+  isSupportedActivityApiVersion,
   MAX_ACTIVITY_SOURCE_BYTES,
   isActivityId,
   isSemanticVersion,
@@ -48,7 +48,7 @@ function validateCatalog(value) {
       throw new Error(`The catalog entry for ${entry.id} has invalid paths or integrity hashes.`);
     }
     if (typeof entry.name !== 'string' || typeof entry.description !== 'string' ||
-        typeof entry.version !== 'string' || entry.apiVersion !== ACTIVITY_API_VERSION ||
+        typeof entry.version !== 'string' || !isSupportedActivityApiVersion(entry.apiVersion) ||
         entry.name.length > 80 || entry.description.length > 500 ||
         !isSemanticVersion(entry.version) ||
         !Array.isArray(entry.matches) || entry.matches.length < 1 || entry.matches.length > 32 ||
@@ -181,7 +181,7 @@ export async function downloadActivity(activityId, catalog) {
     throw new Error(`Activity metadata is invalid: ${error.message}`);
   }
   validateActivitySource(source);
-  if (metadata.apiVersion !== ACTIVITY_API_VERSION || metadata.id !== entry.id ||
+  if (!isSupportedActivityApiVersion(metadata.apiVersion) || metadata.id !== entry.id ||
       metadata.version !== entry.version ||
       JSON.stringify(metadata.matches) !== JSON.stringify(entry.matches) ||
       Boolean(metadata.icon) !== Boolean(iconBytes)) {

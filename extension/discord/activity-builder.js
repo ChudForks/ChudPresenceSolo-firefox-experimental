@@ -1,6 +1,6 @@
 import { EXTENSION_NAME } from '../core/branding.js';
 
-const ACTIVITY_TYPES = Object.freeze({ playing: 0, listening: 2, watching: 3 });
+const ACTIVITY_TYPES = Object.freeze({ playing: 0, streaming: 1, listening: 2, watching: 3 });
 const STATUS_DISPLAY_TYPES = Object.freeze({ name: 0, state: 1, details: 2 });
 
 function milliseconds(seconds) {
@@ -21,6 +21,8 @@ export function buildHeadlessActivity(intent, applicationId) {
     state: intent.state || intent.name || EXTENSION_NAME,
     status_display_type: STATUS_DISPLAY_TYPES[intent.statusDisplayType] ?? STATUS_DISPLAY_TYPES.name,
   };
+
+  if (intent.type === 'streaming' && intent.streamUrl) activity.url = intent.streamUrl;
 
   if (intent.timestamps?.start || intent.timestamps?.end) {
     activity.timestamps = {};

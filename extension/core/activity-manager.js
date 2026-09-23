@@ -3,7 +3,8 @@ import {
   hasUserScriptsPermission,
 } from './activity-permissions.js';
 import {
-  ACTIVITY_API_VERSION,
+  LATEST_ACTIVITY_API_VERSION,
+  isSupportedActivityApiVersion,
   isActivityId,
   normalizeActivityReport,
   validateActivityIcon,
@@ -167,7 +168,7 @@ export class ActivityManager {
   async register(record) {
     validateActivityMetadata(record?.metadata);
     validateActivitySource(record?.code);
-    if (record.metadata.apiVersion !== ACTIVITY_API_VERSION) {
+    if (!isSupportedActivityApiVersion(record.metadata.apiVersion)) {
       throw new Error(`Activity API version ${record.metadata.apiVersion} is not supported.`);
     }
     if (!await hasUserScriptsPermission(this.api)) {
@@ -197,7 +198,7 @@ export class ActivityManager {
 
   async installInternal(activityPackage) {
     const metadata = validateActivityMetadata(activityPackage?.metadata);
-    if (metadata.apiVersion !== ACTIVITY_API_VERSION) throw new Error('This Activity requires an unsupported API version.');
+    if (!isSupportedActivityApiVersion(metadata.apiVersion)) throw new Error('This Activity requires an unsupported API version.');
     const code = validateActivitySource(activityPackage?.source);
     const icon = validateActivityIcon(activityPackage?.icon);
     if (Boolean(metadata.icon) !== Boolean(icon)) {
@@ -259,7 +260,28 @@ export class ActivityManager {
       if (previous.enabled) await this.register(previous).catch(() => {});
       throw error;
     }
+    const removedMatches = Array.isArray(previous.metadata?.matches) ? previous.metadata.matches : [];
+    await this.removeUnusedHostPermissions(removedMatches, records);
     return true;
+  }
+
+  async removeUnusedHostPermissions(removedMatches, remainingRecords) {
+    if (typeof this.api.permissions?.remove !== 'function') return false;
+    const permissionOrigin = (pattern) => {
+      const match = String(pattern).match(/^(https?):\/\/([^/]+)\//i);
+      return match ? `${match[1].toLowerCase()}://${match[2].toLowerCase()}/*` : '';
+    };
+    const stillUsed = new Set(Object.values(remainingRecords)
+      .filter((record) => record?.metadata && Array.isArray(record.metadata.matches))
+      .flatMap((record) => record.metadata.matches.map(permissionOrigin)));
+    const unused = [...new Set(removedMatches.map(permissionOrigin))]
+      .filter((origin) => origin && !stillUsed.has(origin));
+    if (!unused.length) return true;
+    try {
+      return await this.api.permissions.remove({ origins: unused });
+    } catch {
+      return false;
+    }
   }
 
   setEnabled(id, enabled) {
@@ -354,7 +376,7 @@ export class ActivityManager {
         }
         continue;
       }
-      if (record.metadata?.apiVersion !== ACTIVITY_API_VERSION) {
+      if (!isSupportedActivityApiVersion(record.metadata?.apiVersion)) {
         record.error = `Activity API version ${record.metadata.apiVersion} is not supported.`;
         await this.unregister(record.metadata.id);
         await this.onClear(record.metadata.id);
@@ -447,7 +469,7 @@ export class ActivityManager {
 
     let report;
     try {
-      report = normalizeActivityReport(message.report);
+      report = normalizeActivityReport(message.report, record.metadata.apiVersion);
     } catch {
       return false;
     }
@@ -469,6 +491,7 @@ export class ActivityManager {
         activityName: record.metadata.name,
         activityCategory: record.metadata.category || 'other',
         activityVersion: record.metadata.version,
+        presenceKind: record.metadata.presence?.kind || '',
         idle: false,
         ad: false,
       },
@@ -498,7 +521,7 @@ export class ActivityManager {
     const userScriptsPermission = await hasUserScriptsPermission(this.api);
     const statuses = await this.listInstalled();
     return {
-      apiVersion: ACTIVITY_API_VERSION,
+      apiVersion: LATEST_ACTIVITY_API_VERSION,
       userScriptsAvailable: Boolean(this.api.userScripts),
       userScriptsPermission,
       installed: statuses,
