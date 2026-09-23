@@ -295,6 +295,13 @@ function collect() {
       : '';
 
   return {
+    activityName: 'YouTube',
+    displayName: shorts ? 'YouTube Shorts' : live ? 'YouTube Live' : 'YouTube',
+    settingKeys: {
+      enabled: 'sourceYouTube', showPaused: 'youtubeShowPaused', statusDisplay: 'youtubeStatusDisplay',
+      showArtwork: 'youtubeShowArtwork', showTimestamps: 'youtubeShowTimestamps', showButtons: 'youtubeShowButtons',
+    },
+    presenceKind: live ? 'streaming' : 'video',
     title,
     artist,
     album: '',
@@ -310,6 +317,16 @@ function collect() {
     live,
     source: 'youtube',
     kind,
+    display: {
+      details: title,
+      state: artist,
+      largeText: title,
+      statusFields: { app: 'name', creator: 'state', video: 'details' },
+    },
+    buttons: [
+      url && { label: shorts ? 'Watch Short' : 'Watch on YouTube', url },
+      channelHref() && channelHref() !== url && { label: 'View channel', url: channelHref() },
+    ].filter(Boolean).slice(0, 2),
   };
 }
 

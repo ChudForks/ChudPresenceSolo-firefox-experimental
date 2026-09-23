@@ -59,17 +59,7 @@ function sourceIcon(track) {
 }
 
 function sourceName(track) {
-  if (track?.activityName) return track.activityName;
-  if (track?.source === 'movies67') return '67Movies';
-  if (track?.source === 'crunchyroll') return 'Crunchyroll';
-  if (track?.source === 'youtube') {
-    if (track.kind === 'short') return 'YouTube Shorts';
-    if (track.live || track.kind === 'live') return 'YouTube Live';
-    return 'YouTube';
-  }
-  if (track?.source === 'twitch') return track.live || track.kind === 'live' ? 'Twitch Live' : 'Twitch';
-  if (track?.source === 'kick') return track.live || track.kind === 'live' ? 'Kick Live' : 'Kick';
-  return 'Playback';
+  return track?.displayName || track?.activityName || 'Playback';
 }
 
 function buildServiceSettings() {
@@ -204,9 +194,7 @@ function renderInstalledActivitySettings() {
     }
 
     const statusSelect = card.querySelector('[data-setting="status"]');
-    const statusOptions = activity.id === 'crunchyroll'
-      ? [['app', 'Crunchyroll'], ['artist', 'Series'], ['track', 'Episode']]
-      : [['app', 'Activity name'], ['artist', 'Artist / creator'], ['track', 'Media title']];
+    const statusOptions = [['app', 'Activity name'], ['artist', 'Artist / creator'], ['track', 'Media title']];
     for (const [value, label] of statusOptions) {
       statusSelect.append(new Option(label, value));
     }
@@ -313,7 +301,14 @@ function renderDashboard(state) {
   const track = state.track;
   const source = sourceName(track);
   const enabled = settings.enabled !== false;
-  const active = enabled && Boolean(track?.title);
+  const media = track?.media;
+  const playback = track?.playback;
+  const title = media?.title || track?.title || '';
+  const creator = media?.series || media?.artist || media?.creator || media?.channel || track?.artist || '';
+  const album = media?.album || track?.album || '';
+  const image = track?.artwork?.large || track?.artwork || '';
+  const playing = playback ? playback.state === 'playing' : Boolean(track?.playing);
+  const active = enabled && Boolean(title);
 
   document.body.dataset.enabled = String(enabled);
   document.getElementById('brand-status').textContent = !enabled ? 'Activity paused' : active ? `${source} active` : 'Ready to share';
@@ -325,12 +320,12 @@ function renderDashboard(state) {
     document.createTextNode(active ? 'Active' : enabled ? 'Waiting' : 'Paused'),
   );
 
-  if (track?.title) {
-    kickerEl.textContent = track.playing ? `Now playing · ${source}` : `Paused · ${source}`;
-    titleEl.textContent = track.title;
-    artistEl.textContent = [track.artist, track.album].filter(Boolean).join(' • ') || source;
-    if (track.artwork) {
-      artEl.src = track.artwork;
+  if (title) {
+    kickerEl.textContent = playing ? `Now playing · ${source}` : `Paused · ${source}`;
+    titleEl.textContent = title;
+    artistEl.textContent = [creator, album].filter(Boolean).join(' • ') || source;
+    if (image) {
+      artEl.src = image;
       artEl.hidden = false;
       artFallback.hidden = true;
     } else {

@@ -165,6 +165,13 @@ function collect() {
 
   return {
     source: SOURCE,
+    activityName: 'Twitch',
+    displayName: live ? 'Twitch Live' : 'Twitch',
+    settingKeys: {
+      enabled: 'sourceTwitch', showPaused: 'twitchShowPaused', statusDisplay: 'twitchStatusDisplay',
+      showArtwork: 'twitchShowArtwork', showTimestamps: 'twitchShowTimestamps', showButtons: 'twitchShowButtons',
+    },
+    presenceKind: live ? 'streaming' : 'video',
     kind: live ? 'live' : 'video',
     live,
     title,
@@ -178,6 +185,16 @@ function collect() {
     duration,
     ad: false,
     idle: false,
+    display: {
+      details: title,
+      state: channel || session.artist,
+      largeText: title,
+      statusFields: { app: 'name', streamer: 'state', stream: 'details' },
+    },
+    buttons: [
+      { label: 'Watch on Twitch', url },
+      channelUrl() && channelUrl() !== url && { label: 'Visit channel', url: channelUrl() },
+    ].filter(Boolean).slice(0, 2),
   };
 }
 

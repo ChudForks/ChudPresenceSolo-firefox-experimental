@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  applicationIdForSource,
+  applicationIdForPresence,
   DEFAULT_SETTINGS,
   isTrackAllowed,
   normalizeSettings,
-  presenceDetailsForSource,
+  presenceDetailsForTrack,
 } from '../extension/core/settings.js';
-import { SERVICE_APPLICATION_IDS } from '../extension/config.js';
+import { DISCORD_CLIENT_ID } from '../extension/config.js';
 
 test('normalizes missing and invalid settings to defaults', () => {
   assert.deepEqual(normalizeSettings({ enabled: false, showArtwork: 'no' }), {
@@ -17,7 +17,9 @@ test('normalizes missing and invalid settings to defaults', () => {
 });
 
 test('filters disabled sources', () => {
-  assert.equal(isTrackAllowed({ source: 'youtube', playing: true }, {
+  assert.equal(isTrackAllowed({
+    source: 'youtube', playing: true, settingKeys: { enabled: 'sourceYouTube' },
+  }, {
     ...DEFAULT_SETTINGS,
     sourceYouTube: false,
   }), false);
@@ -46,17 +48,18 @@ test('migrates legacy global presence preferences to every service', () => {
   }
 });
 
-test('uses presence details and hard-coded application IDs for the active service', () => {
+test('uses generic track settings and one fixed Discord application identity', () => {
   const settings = {
     ...DEFAULT_SETTINGS,
     youtubeShowArtwork: false,
   };
+  const track = { settingKeys: {
+    statusDisplay: 'youtubeStatusDisplay', showArtwork: 'youtubeShowArtwork',
+    showTimestamps: 'youtubeShowTimestamps', showButtons: 'youtubeShowButtons',
+  } };
 
-  assert.equal(applicationIdForSource('youtube', settings), SERVICE_APPLICATION_IDS.youtube);
-  assert.equal(applicationIdForSource('crunchyroll', settings), SERVICE_APPLICATION_IDS.crunchyroll);
-  assert.equal(applicationIdForSource('twitch', settings), SERVICE_APPLICATION_IDS.twitch);
-  assert.equal(applicationIdForSource('kick', settings), SERVICE_APPLICATION_IDS.kick);
-  assert.deepEqual(presenceDetailsForSource('youtube', settings), {
+  assert.equal(applicationIdForPresence(), DISCORD_CLIENT_ID);
+  assert.deepEqual(presenceDetailsForTrack(track, settings), {
     statusDisplay: 'app',
     showArtwork: false,
     showTimestamps: true,
@@ -71,18 +74,24 @@ test('normalizes and selects each service status display preference', () => {
     twitchStatusDisplay: 'streamer',
     kickStatusDisplay: 'stream',
   });
+  const keys = {
+    youtube: { statusDisplay: 'youtubeStatusDisplay' },
+    movies67: { statusDisplay: 'movies67StatusDisplay' },
+    twitch: { statusDisplay: 'twitchStatusDisplay' },
+    kick: { statusDisplay: 'kickStatusDisplay' },
+  };
 
-  assert.equal(presenceDetailsForSource('youtube', settings).statusDisplay, 'creator');
-  assert.equal(presenceDetailsForSource('movies67', settings).statusDisplay, 'app');
-  assert.equal(presenceDetailsForSource('twitch', settings).statusDisplay, 'streamer');
-  assert.equal(presenceDetailsForSource('kick', settings).statusDisplay, 'stream');
+  assert.equal(presenceDetailsForTrack({ settingKeys: keys.youtube }, settings).statusDisplay, 'creator');
+  assert.equal(presenceDetailsForTrack({ settingKeys: keys.movies67 }, settings).statusDisplay, 'app');
+  assert.equal(presenceDetailsForTrack({ settingKeys: keys.twitch }, settings).statusDisplay, 'streamer');
+  assert.equal(presenceDetailsForTrack({ settingKeys: keys.kick }, settings).statusDisplay, 'stream');
 });
 
 test('applies installed Activity preferences to paused filtering and presence details', () => {
   const track = { activityId: 'sample-activity', source: 'sample-activity', playing: false };
   assert.equal(isTrackAllowed(track, DEFAULT_SETTINGS, { showPaused: false }), false);
   assert.equal(isTrackAllowed(track, DEFAULT_SETTINGS, { showPaused: true }), true);
-  assert.deepEqual(presenceDetailsForSource('sample-activity', DEFAULT_SETTINGS, {
+  assert.deepEqual(presenceDetailsForTrack(track, DEFAULT_SETTINGS, {
     statusDisplay: 'track',
     showArtwork: false,
     showTimestamps: false,

@@ -130,6 +130,13 @@ function collect() {
   const channel = channelName();
   return {
     source: SOURCE,
+    activityName: 'Kick',
+    displayName: live ? 'Kick Live' : 'Kick',
+    settingKeys: {
+      enabled: 'sourceKick', showPaused: 'kickShowPaused', statusDisplay: 'kickStatusDisplay',
+      showArtwork: 'kickShowArtwork', showTimestamps: 'kickShowTimestamps', showButtons: 'kickShowButtons',
+    },
+    presenceKind: 'video',
     kind: live ? 'live' : 'video',
     live,
     title,
@@ -143,6 +150,18 @@ function collect() {
     duration,
     ad: false,
     idle: false,
+    display: {
+      details: title,
+      state: channel || session.artist,
+      largeText: title,
+      statusFields: { app: 'name', streamer: 'state', stream: 'details' },
+    },
+    buttons: [
+      { label: 'Watch on Kick', url: location.href.split('#')[0] },
+      channelUrl() && channelUrl() !== location.href.split('#')[0] && {
+        label: 'Visit channel', url: channelUrl(),
+      },
+    ].filter(Boolean).slice(0, 2),
   };
 }
 

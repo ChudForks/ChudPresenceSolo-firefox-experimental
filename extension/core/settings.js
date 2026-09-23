@@ -1,5 +1,5 @@
-import { SERVICE_APPLICATION_IDS } from '../config.js';
 import { normalizeActivityPreferences } from './activity-settings.js';
+import { DISCORD_CLIENT_ID } from '../config.js';
 
 export const SERVICE_SETTINGS = Object.freeze({
   youtube: Object.freeze({
@@ -81,7 +81,6 @@ export const LEGACY_DETAIL_SETTINGS = Object.freeze([
 
 export const LEGACY_APPLICATION_ID_SETTINGS = Object.freeze([
   'youtubeApplicationId',
-  'crunchyrollApplicationId',
   'movies67ApplicationId',
   'twitchApplicationId',
   'kickApplicationId',
@@ -117,7 +116,7 @@ export function normalizeSettings(value = {}) {
   return normalized;
 }
 
-export function presenceDetailsForSource(source, settings = DEFAULT_SETTINGS, activityPreferences = null) {
+export function presenceDetailsForTrack(track, settings = DEFAULT_SETTINGS, activityPreferences = null) {
   if (activityPreferences) {
     const preferences = normalizeActivityPreferences(activityPreferences);
     return {
@@ -127,30 +126,33 @@ export function presenceDetailsForSource(source, settings = DEFAULT_SETTINGS, ac
       showButtons: preferences.showButtons,
     };
   }
-  const service = SERVICE_SETTINGS[source];
-  if (!service) return {};
+  const keys = track?.settingKeys;
+  if (!keys) return {};
   const current = normalizeSettings(settings);
   return {
-    statusDisplay: current[service.status],
-    showArtwork: current[service.artwork],
-    showTimestamps: current[service.timestamps],
-    showButtons: current[service.buttons],
+    ...(keys.statusDisplay ? { statusDisplay: current[keys.statusDisplay] } : {}),
+    ...(keys.showArtwork ? { showArtwork: current[keys.showArtwork] } : {}),
+    ...(keys.showTimestamps ? { showTimestamps: current[keys.showTimestamps] } : {}),
+    ...(keys.showButtons ? { showButtons: current[keys.showButtons] } : {}),
   };
 }
 
-export function applicationIdForSource(source) {
-  return SERVICE_APPLICATION_IDS[source] || SERVICE_APPLICATION_IDS.youtube || '';
+export function applicationIdForPresence() {
+  return DISCORD_CLIENT_ID;
 }
 
 export function isTrackAllowed(track, settings = DEFAULT_SETTINGS, activityPreferences = null) {
   if (!track) return false;
   const current = normalizeSettings(settings);
   if (!current.enabled) return false;
+  if (track.media && track.playback) {
+    return track.playback.state === 'playing' || normalizeActivityPreferences(activityPreferences).showPaused;
+  }
   if (track.activityId) {
     return track.playing || normalizeActivityPreferences(activityPreferences).showPaused;
   }
-  const service = SERVICE_SETTINGS[track.source];
-  if (!service) return true;
-  if (!current[service.enabled]) return false;
-  return track.playing || current[service.paused];
+  const keys = track.settingKeys;
+  if (!keys) return true;
+  if (keys.enabled && !current[keys.enabled]) return false;
+  return track.playing || !keys.showPaused || current[keys.showPaused];
 }

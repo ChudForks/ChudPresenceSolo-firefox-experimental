@@ -2,14 +2,6 @@ import { EXTENSION_NAME } from './branding.js';
 
 const MAX_TEXT_LENGTH = 128;
 
-const SOURCE_LABELS = Object.freeze({
-  crunchyroll: 'Crunchyroll',
-  movies67: '67Movies',
-  twitch: 'Twitch',
-  kick: 'Kick',
-  youtube: 'YouTube',
-});
-
 function cleanText(value, maxLength = MAX_TEXT_LENGTH) {
   const text = String(value || '').replace(/\s+/g, ' ').trim();
   if (text.length <= maxLength) return text;
@@ -20,214 +12,141 @@ function safeUrl(value) {
   if (!value) return '';
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' ? url.toString() : '';
+    return url.protocol === 'https:' && !url.username && !url.password ? url.toString() : '';
   } catch {
     return '';
   }
 }
 
-function sourceLabel(track) {
-  return track?.activityName || SOURCE_LABELS[track?.source] || EXTENSION_NAME;
+function isNormalizedActivityReport(track) {
+  return Boolean(track?.media && track?.playback && track?.display && track?.artwork);
 }
 
-function activityType(track) {
-  const declaredType = {
-    music: 'listening',
-    video: 'watching',
-    streaming: 'streaming',
-    generic: 'playing',
-  }[track?.presenceKind];
-  const kindType = track?.kind === 'song'
-    ? 'listening'
-    : track?.kind === 'stream' || track?.kind === 'live'
-      ? 'streaming'
-      : track?.kind === 'game' || track?.kind === 'generic'
-        ? 'playing'
-        : 'watching';
-  const requestedType = declaredType || kindType;
-  if (requestedType !== 'streaming') return requestedType;
-
-  const url = safeUrl(track?.url);
-  if (!url) return 'watching';
-  const hostname = new URL(url).hostname.toLowerCase();
-  return ['twitch.tv', 'www.twitch.tv', 'youtube.com', 'www.youtube.com'].includes(hostname)
-    ? 'streaming'
-    : 'watching';
-}
-
-function timestamps(track, nowMs) {
-  if (!track?.playing) return null;
-
-  const position = Math.max(0, Number(track.position) || 0);
-  const now = Math.floor(nowMs / 1000);
-  if (track.live || track.kind === 'live') {
-    return { start: now - Math.floor(position) };
-  }
-
-  const duration = Math.max(0, Number(track.duration) || 0);
-  if (!duration || position >= duration) return null;
-  return {
-    start: now - Math.floor(position),
-    end: now + Math.ceil(duration - position),
+function reportForTrack(track) {
+  if (isNormalizedActivityReport(track)) return track;
+  const kind = track.kind === 'short' ? 'video' : track.kind === 'live' ? 'stream' : track.kind || 'generic';
+  const media = {
+    title: track.title,
+    artist: track.artist,
+    album: track.album,
+    series: track.series || (kind === 'episode' ? track.artist : undefined),
+    subtitle: track.subtitle,
+    creator: track.creator,
+    channel: track.channel,
+    game: track.game,
+    category: track.category,
   };
-}
-
-function withMarkers(value, markers, fallback) {
-  const suffix = markers.length ? ` • ${markers.join(' • ')}` : '';
-  const text = cleanText(value || fallback, MAX_TEXT_LENGTH - suffix.length);
-  return `${text}${suffix}`;
-}
-
-function withPlaybackState(value, track, fallback) {
-  return withMarkers(value, track?.playing === false ? ['Paused'] : [], fallback);
-}
-
-function siteUrl(value) {
-  const safe = safeUrl(value);
-  if (!safe) return '';
-  return `${new URL(safe).origin}/`;
-}
-
-function layoutFor(track) {
-  const provider = sourceLabel(track);
-  const activityUrl = safeUrl(track.url);
-  const channelUrl = safeUrl(track.channelUrl);
-
-  if (track.source === 'youtube') {
-    const live = track.live || track.kind === 'live';
-    const creator = cleanText(track.artist || provider);
-    return {
-      details: cleanText(track.title),
-      state: withMarkers(
-        creator,
-        [live && 'Live', !track.playing && 'Paused'].filter(Boolean),
-        provider,
-      ),
-      largeText: cleanText(track.title || provider),
-      buttons: [
-        activityUrl && {
-          label: track.kind === 'short' ? 'Watch Short' : 'Watch on YouTube',
-          url: activityUrl,
-        },
-        channelUrl && channelUrl !== activityUrl && { label: 'View channel', url: channelUrl },
-      ],
-      statusFields: { app: 'name', creator: 'state', video: 'details' },
-    };
-  }
-
-  if (track.source === 'crunchyroll') {
-    const movie = track.kind === 'movie';
-    const episodeTitle = cleanText(track.title);
-    const series = cleanText(track.artist || episodeTitle || provider);
-    return {
-      details: movie ? episodeTitle : series,
-      state: withPlaybackState(movie ? provider : track.album || episodeTitle, track, provider),
-      largeText: movie ? episodeTitle : episodeTitle || track.album || provider,
-      buttons: Array.isArray(track.buttons) && track.buttons.length
-        ? track.buttons
-        : [
-            activityUrl && {
-              label: movie ? 'Watch movie' : 'Watch on Crunchyroll',
-              url: activityUrl,
-            },
-            !movie && channelUrl && channelUrl !== activityUrl && { label: 'View series', url: channelUrl },
-          ],
-      statusFields: { app: 'name', artist: 'details', track: 'state', series: 'details', episode: 'state' },
-    };
-  }
-
-  if (track.source === 'movies67') {
-    const movie = track.kind === 'movie';
-    const title = cleanText(track.title);
-    const series = cleanText(track.artist || title || provider);
-    return {
-      details: movie ? title : series,
-      state: withPlaybackState(movie ? provider : title, track, provider),
-      largeText: cleanText(movie ? title : [track.album, title].filter(Boolean).join(' • ') || provider),
-      buttons: [
-        activityUrl && {
-          label: movie ? 'Watch movie' : 'Watch on 67Movies',
-          url: activityUrl,
-        },
-        activityUrl && { label: 'Open 67Movies', url: siteUrl(activityUrl) },
-      ],
-      statusFields: { app: 'name', series: 'details', episode: 'state' },
-    };
-  }
-
-  if (track.source === 'twitch') {
-    const streamer = cleanText(track.artist || provider);
-    const live = track.live || track.kind === 'live';
-    return {
-      details: cleanText(track.title),
-      state: withMarkers(
-        streamer,
-        [live && 'Live', !track.playing && 'Paused'].filter(Boolean),
-        provider,
-      ),
-      largeText: cleanText(track.title || provider),
-      buttons: [
-        activityUrl && { label: 'Watch on Twitch', url: activityUrl },
-        channelUrl && channelUrl !== activityUrl && { label: 'Visit channel', url: channelUrl },
-      ],
-      statusFields: { app: 'name', streamer: 'state', stream: 'details' },
-    };
-  }
-
-  if (track.source === 'kick') {
-    const streamer = cleanText(track.artist || provider);
-    const live = track.live || track.kind === 'live';
-    return {
-      details: cleanText(track.title),
-      state: withMarkers(
-        streamer,
-        [live && 'Live', !track.playing && 'Paused'].filter(Boolean),
-        provider,
-      ),
-      largeText: cleanText(track.title || provider),
-      buttons: [
-        activityUrl && { label: 'Watch on Kick', url: activityUrl },
-        channelUrl && channelUrl !== activityUrl && { label: 'Visit channel', url: channelUrl },
-      ],
-      statusFields: { app: 'name', streamer: 'state', stream: 'details' },
-    };
-  }
-
+  const displayDefaults = (() => {
+    if (kind === 'song') return { details: media.title, state: media.artist || '' };
+    if (kind === 'episode') return { details: media.series || media.title, state: media.title };
+    if (kind === 'stream') return { details: media.title, state: media.creator || media.channel || media.artist || '' };
+    if (kind === 'movie') return { details: media.title, state: '' };
+    if (kind === 'game') return { details: media.game || media.title, state: media.category || '' };
+    return { details: track.details || media.title, state: track.state || media.artist || media.album || '' };
+  })();
+  const legacyArtwork = typeof track.artwork === 'string'
+    ? { large: track.artwork, largeText: track.display?.largeText || media.album || media.title }
+    : track.artwork || {};
   return {
-    details: cleanText(track.details || track.title),
-    state: withPlaybackState(track.state || track.artist || track.album, track, provider),
-    largeText: cleanText(track.album || track.details || provider),
-    buttons: Array.isArray(track.buttons) && track.buttons.length
+    ...track,
+    kind,
+    media,
+    playback: {
+      state: track.playing === false ? 'paused' : 'playing',
+      position: Number(track.position) || 0,
+      duration: Number(track.duration) || 0,
+      live: Boolean(track.live || track.kind === 'live'),
+      rate: 1,
+    },
+    display: { ...displayDefaults, ...(track.display || {}) },
+    artwork: legacyArtwork,
+    buttons: Array.isArray(track.buttons)
       ? track.buttons
-      : [activityUrl && { label: 'Open', url: activityUrl }],
-    statusFields: { app: 'name', artist: 'state', track: 'details' },
+      : track.url ? [{ label: 'Open', url: track.url }] : [],
+    visibility: track.ad ? 'ad' : track.idle ? 'idle' : 'normal',
   };
 }
 
-/**
- * Converts a provider-neutral track into a transport-neutral Discord presence
- * intent. A native Social SDK, Embedded App, or another supported connector can
- * translate this object without coupling itself to page scraping code.
- */
-export function createPresenceIntent(track, nowMs = Date.now(), settings = {}) {
-  if (!track?.title || track.idle || track.ad) return null;
+function activityType(report) {
+  const declared = report.presenceKind;
+  const type = declared === 'music'
+    ? 'listening'
+    : declared === 'video'
+      ? 'watching'
+      : declared === 'streaming'
+        ? 'streaming'
+        : declared === 'generic'
+          ? 'playing'
+          : report.kind === 'song'
+            ? 'listening'
+            : report.kind === 'stream'
+              ? 'streaming'
+              : report.kind === 'game' || report.kind === 'generic'
+                ? 'playing'
+                : 'watching';
+  if (type !== 'streaming') return type;
+  const hasSafeUrl = safeUrl(report.url) || safeUrl(report.buttons?.[0]?.url);
+  return hasSafeUrl ? type : 'watching';
+}
 
-  const provider = sourceLabel(track);
-  const layout = layoutFor(track);
-  const type = activityType(track);
-  const artwork = settings.showArtwork === false ? '' : safeUrl(track.artwork);
-  const statusDisplayType = layout.statusFields[settings.statusDisplay] || 'name';
+function timestamps(playback, nowMs) {
+  if (playback.state !== 'playing') return null;
+  const position = Math.max(0, Number(playback.position) || 0);
+  const now = Math.floor(nowMs / 1000);
+  if (playback.live) return { start: now - Math.floor(position) };
+  const duration = Math.max(0, Number(playback.duration) || 0);
+  if (!duration || position >= duration) return null;
+  return { start: now - Math.floor(position), end: now + Math.ceil(duration - position) };
+}
+
+function statusDisplayType(report, settings) {
+  const selected = report.display.statusFields?.[settings.statusDisplay];
+  if (selected) return selected;
+  if (settings.statusDisplay === 'app') return 'name';
+  if (settings.statusDisplay === 'artist' || settings.statusDisplay === 'creator') return 'state';
+  if (settings.statusDisplay === 'track' || settings.statusDisplay === 'video') return 'details';
+  return report.display.statusDisplay || 'name';
+}
+
+/** Convert generic media data to a transport-neutral presence intent. */
+export function createPresenceIntent(track, nowMs = Date.now(), settings = {}) {
+  if (!track) return null;
+  const report = reportForTrack(track);
+  if (report.visibility !== 'normal' || !report.media?.title) return null;
+
+  const name = cleanText(report.activityName || EXTENSION_NAME, 128);
+  const details = cleanText(report.display.details || report.media.title);
+  if (!details) return null;
+  const paused = report.playback.state === 'paused';
+  const markers = [report.playback.live && 'Live', paused && 'Paused'].filter(Boolean);
+  const state = cleanText(report.display.state || report.media.artist || report.media.creator || name);
+  const type = activityType(report);
+  const streamUrl = safeUrl(report.url) || safeUrl(report.buttons?.[0]?.url);
+  const art = settings.showArtwork === false ? null : report.artwork;
+  const largeImage = safeUrl(art?.large);
+  const smallImage = safeUrl(art?.small);
+  const buttons = settings.showButtons === false
+    ? []
+    : (report.buttons || []).map((button) => {
+        const url = safeUrl(button?.url);
+        const label = cleanText(button?.label, 32);
+        return url && label ? { label, url } : null;
+      }).filter(Boolean).slice(0, 2);
 
   return {
-    name: provider,
+    name,
     type,
-    ...(type === 'streaming' ? { streamUrl: safeUrl(track.url) } : {}),
-    details: layout.details,
-    state: layout.state,
-    statusDisplayType,
-    timestamps: settings.showTimestamps === false ? null : timestamps(track, nowMs),
-    assets: artwork ? { largeImage: artwork, largeText: cleanText(layout.largeText) } : null,
-    buttons: settings.showButtons === false ? [] : layout.buttons.filter(Boolean).slice(0, 2),
-    source: track.source || 'unknown',
+    ...(type === 'streaming' && streamUrl ? { streamUrl } : {}),
+    details,
+    state: markers.length ? `${cleanText(state, MAX_TEXT_LENGTH - markers.join(' • ').length - 3)} • ${markers.join(' • ')}` : state,
+    statusDisplayType: statusDisplayType(report, settings),
+    timestamps: settings.showTimestamps === false ? null : timestamps(report.playback, nowMs),
+    assets: largeImage ? {
+      largeImage,
+      largeText: cleanText(art.largeText || report.media.album || report.media.title),
+      ...(smallImage ? { smallImage, smallText: cleanText(art.smallText || name) } : {}),
+    } : null,
+    buttons,
+    source: report.activityId || report.source || 'unknown',
   };
 }

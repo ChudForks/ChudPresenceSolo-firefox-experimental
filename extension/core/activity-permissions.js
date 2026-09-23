@@ -1,4 +1,7 @@
-const REPOSITORY_ORIGIN = 'https://raw.githubusercontent.com';
+const REPOSITORY_ORIGINS = [
+  'https://raw.githubusercontent.com',
+  'https://api.github.com',
+];
 
 function apiRoot() {
   const api = globalThis.browser || globalThis.chrome;
@@ -35,7 +38,7 @@ export async function requestHostPermissions(matches, api = apiRoot()) {
 }
 
 export async function requestRepositoryPermission(api = apiRoot()) {
-  return api.permissions.request({ origins: [`${REPOSITORY_ORIGIN}/*`] });
+  return api.permissions.request({ origins: REPOSITORY_ORIGINS.map((origin) => `${origin}/*`) });
 }
 
 export function watchPermissionChanges(onChange, api = apiRoot()) {

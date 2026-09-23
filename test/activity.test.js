@@ -9,6 +9,17 @@ test('rejects idle, ad, and untitled reports', () => {
   assert.equal(isReportable({ playing: true }), false);
 });
 
+test('recognizes normalized Activity reports and suppresses non-normal visibility', () => {
+  assert.equal(isReportable({
+    kind: 'episode', media: { title: 'Episode' }, playback: { state: 'playing' }, visibility: 'normal',
+  }), true);
+  for (const visibility of ['idle', 'private', 'ad']) {
+    assert.equal(isReportable({
+      kind: 'episode', media: { title: 'Episode' }, playback: { state: 'playing' }, visibility,
+    }), false);
+  }
+});
+
 test('prefers a playing activity to a paused activity', () => {
   const tracks = new Map([
     [1, { title: 'Paused', playing: false }],

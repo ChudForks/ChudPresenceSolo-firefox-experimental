@@ -52,10 +52,19 @@ h1 { margin: 7px 0 8px; font-size: clamp(30px, 4vw, 42px); line-height: 1.08; le
 .badge.active { border-color: rgba(114,221,186,.25); color: var(--green); }
 .badge.issue { border-color: rgba(240,141,154,.25); color: #ffadb8; }
 .card-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 13px; color: var(--faint); font-size: 11px; }
+.runtime-diagnostics { margin: -4px 0 13px; color: var(--faint); font-size: 10px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .card-sites { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .card-actions .button { min-height: 34px; padding: 0 12px; font-size: 12px; }
 .card-actions .remove { margin-left: auto; color: #c2c7d8; }
+.activity-settings { display: grid; gap: 10px; margin: 0 0 14px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.activity-settings legend { padding: 0 5px; color: #b8c0e2; font-size: 11px; font-weight: 700; }
+.activity-setting { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(110px, 1.2fr) auto; gap: 8px; align-items: center; color: var(--muted); font-size: 11px; }
+.activity-setting input:not([type="checkbox"]), .activity-setting select { width: 100%; min-width: 0; min-height: 32px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 7px; background: #111421; color: var(--text); }
+.activity-setting input[type="checkbox"] { justify-self: end; width: 18px; height: 18px; accent-color: #8490ff; }
+.activity-setting input[type="range"] { padding: 0; accent-color: #8490ff; }
+.setting-output { min-width: 28px; color: var(--faint); font-size: 10px; text-align: right; }
+.setting-status { color: #ffadb8; font-size: 11px; }
 .empty-state { grid-column: 1 / -1; padding: 31px 20px; border: 1px dashed #343a52; border-radius: 12px; color: var(--muted); text-align: center; }
 .empty-state strong { display: block; margin-bottom: 5px; color: #d8dcf0; }
 .developer-toggle { display: flex; max-width: 620px; align-items: center; justify-content: space-between; gap: 20px; padding: 17px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); cursor: pointer; }

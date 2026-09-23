@@ -1,15 +1,16 @@
 import { selectActivity } from './core/activity.js';
 import { ActivityRegistry } from './core/activity-registry.js';
-import { ActivityManager } from './core/activity-manager.js';
+import { ActivityManager, sanitizeDiagnosticValue } from './core/activity-manager.js';
+import { shouldInvalidateActivityTab } from './core/tab-lifecycle.js';
 import { createPresenceIntent } from './core/presence.js';
 import {
-  applicationIdForSource,
+  applicationIdForPresence,
   DEFAULT_SETTINGS,
   isTrackAllowed,
   LEGACY_APPLICATION_ID_SETTINGS,
   LEGACY_DETAIL_SETTINGS,
   normalizeSettings,
-  presenceDetailsForSource,
+  presenceDetailsForTrack,
 } from './core/settings.js';
 import { presencePublisher } from './platform/presence-publisher.js';
 import { EXTENSION_NAME } from './core/branding.js';
@@ -17,12 +18,12 @@ import { EXTENSION_NAME } from './core/branding.js';
 const activityRegistry = new ActivityRegistry();
 const ACTIVITY_PRUNE_ALARM = 'activity-prune-stale';
 const activityManager = new ActivityManager({
-  onReport({ tabId, documentId, track }) {
-    activityRegistry.update(tabId, documentId, track);
+  onReport({ tabId, documentId, frameId, track }) {
+    activityRegistry.update(tabId, documentId, track, frameId);
     schedulePublish();
   },
-  onClear(activityId, tabId, documentId) {
-    const known = activityRegistry.clearActivity(activityId, tabId, documentId);
+  onClear(activityId, tabId, documentId, frameId) {
+    const known = activityRegistry.clearActivity(activityId, tabId, documentId, frameId);
     if (!known) return;
     if (typeof tabId === 'number') clearActiveTab(tabId);
     schedulePublish();
@@ -62,8 +63,10 @@ function currentTrack() {
 }
 
 function setAction(track) {
-  const suffix = track?.artist ? ` — ${track.artist}` : '';
-  chrome.action.setTitle({ title: track?.title ? `${track.title}${suffix}` : EXTENSION_NAME });
+  const title = track?.media?.title || track?.title || '';
+  const creator = track?.media?.artist || track?.media?.creator || track?.artist || '';
+  const suffix = creator ? ` — ${creator}` : '';
+  chrome.action.setTitle({ title: title ? `${title}${suffix}` : EXTENSION_NAME });
 }
 
 async function publishCurrentActivity({ closing = false } = {}) {
@@ -72,13 +75,13 @@ async function publishCurrentActivity({ closing = false } = {}) {
   const intent = createPresenceIntent(
     track,
     Date.now(),
-    presenceDetailsForSource(
-      track?.source,
+    presenceDetailsForTrack(
+      track,
       settings,
       track?.activityId ? activityManager.preferencesFor(track.activityId) : null,
     ),
   );
-  const applicationId = applicationIdForSource(track?.source, settings);
+  const applicationId = applicationIdForPresence();
   delivery = await presencePublisher.publish(intent, applicationId, { closing });
 }
 
@@ -117,6 +120,7 @@ function pingRemaining() {
 
 function onTabGone(tabId, { closing = false } = {}) {
   if (typeof tabId !== 'number') return;
+  activityManager.invalidateTab(tabId).catch(() => {});
   const known = activityRegistry.clearTab(tabId);
   clearActiveTab(tabId);
   if (!known) return;
@@ -124,9 +128,9 @@ function onTabGone(tabId, { closing = false } = {}) {
   publishCurrentActivity({ closing });
 }
 
-function onDocumentGone(tabId, documentId, { closing = false } = {}) {
+function onDocumentGone(tabId, documentId, { closing = false, frameId = null } = {}) {
   if (typeof tabId !== 'number') return;
-  const known = activityRegistry.clearDocument(tabId, documentId);
+  const known = activityRegistry.clearDocument(tabId, documentId, frameId);
   if (!known) return;
   clearActiveTab(tabId);
   pingRemaining();
@@ -134,9 +138,20 @@ function onDocumentGone(tabId, documentId, { closing = false } = {}) {
 }
 
 async function handleActivityLibraryMessage(message) {
-  if (message.type === 'ACTIVITY_LIBRARY_STATE') return activityManager.status();
+  if (message.type === 'ACTIVITY_LIBRARY_STATE') {
+    const state = await activityManager.status();
+    const track = currentTrack();
+    const preferences = track?.activityId ? activityManager.preferencesFor(track.activityId) : null;
+    const finalPresenceIntent = createPresenceIntent(
+      track,
+      Date.now(),
+      presenceDetailsForTrack(track, settings, preferences),
+    );
+    return { ...state, finalPresenceIntent: sanitizeDiagnosticValue(finalPresenceIntent) };
+  }
   if (message.type === 'ACTIVITY_INSTALL') return activityManager.install(message.activityPackage);
   if (message.type === 'ACTIVITY_REMOVE') return { removed: await activityManager.remove(message.id) };
+  if (message.type === 'ACTIVITY_RELOAD') return activityManager.reload(message.id);
   if (message.type === 'ACTIVITY_SET_ENABLED') {
     const result = await activityManager.setEnabled(message.id, Boolean(message.enabled));
     schedulePublish();
@@ -147,12 +162,19 @@ async function handleActivityLibraryMessage(message) {
     schedulePublish();
     return result;
   }
+  if (message.type === 'ACTIVITY_SET_SETTING') {
+    return activityManager.setActivitySetting(message.id, message.settingId, message.value);
+  }
   if (message.type === 'ACTIVITY_RESTORE') return activityManager.restoreAll();
   return null;
 }
 
 function handleUserScriptMessage(message, sender) {
   return activityManager.handleUserScriptMessage(message, sender);
+}
+
+function handleUserScriptConnect(port) {
+  void activityManager.handleUserScriptConnect(port);
 }
 
 function registerUserScriptMessageListener() {
@@ -166,7 +188,19 @@ function registerUserScriptMessageListener() {
   }
 }
 
+function registerUserScriptConnectListener() {
+  try {
+    const event = chrome.runtime.onUserScriptConnect;
+    if (event?.addListener && !event.hasListener?.(handleUserScriptConnect)) {
+      event.addListener(handleUserScriptConnect);
+    }
+  } catch {
+    // Firefox exposes this event only after the optional userScripts grant.
+  }
+}
+
 registerUserScriptMessageListener();
+registerUserScriptConnectListener();
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const privilegedDiscordMessage = [
@@ -184,8 +218,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     'ACTIVITY_LIBRARY_STATE',
     'ACTIVITY_INSTALL',
     'ACTIVITY_REMOVE',
+    'ACTIVITY_RELOAD',
     'ACTIVITY_SET_ENABLED',
     'ACTIVITY_SET_PREFERENCES',
+    'ACTIVITY_SET_SETTING',
     'ACTIVITY_RESTORE',
   ].includes(message?.type);
   if (libraryMessage) {
@@ -201,21 +237,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.type === 'TRACK_UPDATE') {
     const tabId = sender.tab?.id;
-    activityRegistry.update(tabId, sender.documentId, message.track);
+    activityRegistry.update(tabId, sender.documentId, message.track, sender.frameId);
     schedulePublish();
     sendResponse({ ok: true });
     return false;
   }
 
   if (message?.type === 'TAB_CLOSING') {
-    onDocumentGone(sender.tab?.id, sender.documentId, { closing: true });
+    onDocumentGone(sender.tab?.id, sender.documentId, { closing: true, frameId: sender.frameId });
     sendResponse({ ok: true });
     return false;
   }
 
   if (message?.type === 'HEARTBEAT') {
     const tabId = sender.tab?.id;
-    activityRegistry.heartbeat(tabId, sender.documentId, message.track);
+    activityRegistry.heartbeat(tabId, sender.documentId, message.track, sender.frameId);
     schedulePublish();
     sendResponse({ ok: true });
     return false;
@@ -264,6 +300,7 @@ chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== 'presence') return;
   const tabId = port.sender?.tab?.id;
   const documentId = port.sender?.documentId;
+  const frameId = port.sender?.frameId;
   if (typeof tabId === 'number' && !activityRegistry.has(tabId)) {
     chrome.tabs.sendMessage(tabId, { type: 'FORCE_TICK' }).catch(() => {});
   }
@@ -272,7 +309,7 @@ chrome.runtime.onConnect.addListener((port) => {
     chrome.tabs.get(tabId)
       .then((tab) => {
         if (!tab || tab.discarded) onTabGone(tabId, { closing: true });
-        else onDocumentGone(tabId, documentId);
+        else onDocumentGone(tabId, documentId, { frameId });
       })
       .catch(() => onTabGone(tabId, { closing: true }));
   });
@@ -281,16 +318,9 @@ chrome.runtime.onConnect.addListener((port) => {
 chrome.tabs.onRemoved.addListener((tabId) => onTabGone(tabId, { closing: true }));
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-  if (changeInfo.discarded === true) {
-    onTabGone(tabId);
-    return;
-  }
-
-  // Navigation keeps the tab ID. Clear the old document's activity immediately
-  // so the next supported site's first report can replace it without a timeout.
-  if (changeInfo.status === 'loading' || typeof changeInfo.url === 'string') {
-    onTabGone(tabId);
-  }
+  // A History API URL update keeps the current document and user-script world.
+  // Retiring it here makes its next report fail with stale_document.
+  if (shouldInvalidateActivityTab(changeInfo)) onTabGone(tabId);
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
@@ -321,6 +351,7 @@ chrome.permissions?.onRemoved?.addListener(() => {
 
 chrome.permissions?.onAdded?.addListener(() => {
   registerUserScriptMessageListener();
+  registerUserScriptConnectListener();
   activityManager.restoreAll().catch(() => {});
 });
 

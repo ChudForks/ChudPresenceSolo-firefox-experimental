@@ -55,7 +55,7 @@
         <div class="view-heading"><div><span class="eyebrow">For Activity authors</span><h2 id="developer-title">Developer Mode</h2></div></div>
         <label class="developer-toggle"><span><strong>Enable developer tools</strong><small>Show local Activity loading controls on this browser.</small></span><input id="developer-enabled" type="checkbox" /></label>
         <div class="developer-panel" id="developer-panel" hidden>
-          <p>Select an Activity's <code>metadata.json</code> and <code>activity.js</code> together. Add <code>icon.png</code> if its metadata declares an icon. Local Activities stay on this device.</p>
+          <p>Select an Activity's <code>metadata.json</code> and <code>activity.js</code> together. Add <code>icon.png</code> if its metadata declares an icon. Set metadata <code>frames</code> to <code>all</code> to run the same bundled script in every matching frame; <code>ChudPresence.runtime.frame.isTop</code> identifies the top page. Local Activities stay on this device.</p>
           <label class="file-picker">Activity files<input id="local-files" type="file" accept=".json,.js,.png,application/json,text/javascript,image/png" multiple /></label>
           <div class="selected-files" id="selected-files">Choose both required files to continue.</div>
           <button class="button primary" id="load-local" type="button" disabled>Load local Activity</button>
@@ -63,15 +63,17 @@
         </div>
         <div class="developer-guide">
           <h3>Activity API v1</h3>
-          <p>Scripts run in an isolated Firefox <code>USER_SCRIPT</code> world and can only send normalized reports through <code>ChudPresence.report()</code>.</p>
+          <p>Scripts run in an isolated Firefox <code>USER_SCRIPT</code> world. An Activity may report from the top page or, when configured, matching embedded frames. Developer Mode shows reports, final presence intent, settings, granted origins, frame and document lifecycles, recent logs and network requests. Use Reload Activity to rerun the current package in its active documents.</p>
           <pre><code>ChudPresence.report({
-  title: "Episode title",
-  artist: "Series name",
-  url: location.href,
-  playing: true,
-  position: 120,
-  duration: 1440,
-  kind: "episode"
+  kind: "episode",
+  media: {
+    title: "Episode title",
+    series: "Series name",
+    season: 1,
+    episode: 3
+  },
+  playback: { state: "playing", position: 120, duration: 1440 },
+  buttons: [{ label: "Watch", url: location.href }]
 });</code></pre>
           <a href="ACTIVITY_API.md" target="_blank" rel="noopener">Read the Activity API guide</a>
         </div>

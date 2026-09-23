@@ -49,9 +49,15 @@ starts, and packaged providers include their current report in each heartbeat to
 recover playback state. This fork requires Firefox 142 or later.
 
 The Activity Library requests Firefox's optional `userScripts` permission and
-only the specific HTTPS site patterns selected in an Activity's metadata. New
-site access is requested when the user installs an Activity. Installed scripts
-are restored after browser startup and extension updates.
+the specific HTTPS site and network patterns declared in an Activity's
+metadata. New access is requested when the user installs an Activity. Installed
+scripts are restored after browser startup and extension updates.
+Firefox asks for `userScripts` access on the first install click. Click the
+Activity action again to grant its declared site and network origins; the
+Library then downloads and verifies the package. Developer mode shows the
+installed repository revision and package hashes, recent reports, settings,
+frame ownership, network requests, logs, and upgrade state. Reload Activity
+reruns the installed package in active documents.
 
 ## Privacy and data transmission
 
@@ -63,13 +69,22 @@ and extension settings are stored in Firefox's extension storage. They are never
 exposed to page scripts or sent to the supported streaming services.
 
 The Activity Library fetches the catalog and selected Activity source files from
-the public `ChudForks/ChudPresence-Activities` repository. Installed Activity source and
-metadata are stored locally so they continue to work offline. An Activity can
-read pages only on the sites the user approved and send normalized reports to
-the extension; it does not receive Discord credentials or extension storage
-access. Removing an Activity deletes its stored source, unregisters its script,
-and releases site permissions no longer needed by another installed Activity.
+the public `ChudForks/ChudPresence-Activities` repository. Installed Activity
+source and metadata are stored locally so they continue to work offline. An
+Activity can read pages only on the sites the user approved and can make bounded
+HTTPS requests only to API patterns it declares. These requests omit cookies,
+reject redirects, and cannot target Discord endpoints. Activities do not
+receive Discord OAuth tokens or extension storage access. Removing an Activity
+deletes its stored source, unregisters its script, and releases site and network
+permissions no longer needed by another installed Activity.
 See [the Activity API guide](extension/ACTIVITY_API.md).
+
+Activity API V1 is a trusted first-party API. V1 packages come from the official
+Activities repository or local Developer mode and receive broad, declared site
+capabilities to support detailed integrations. The runtime keeps Discord
+credentials, extension storage, and publishing internals inside the extension.
+A future public/community API may use a different security model; V1 does not
+define that model.
 
 The 67Movies integration also asks The Movie Database (TMDB) for metadata using
 the movie or TV identifier in the current page URL. No analytics, advertising,
@@ -82,7 +97,7 @@ See [PRIVACY.md](PRIVACY.md) for the full privacy policy.
 
 ## Development
 
-Requirements: Node.js 18 or newer.
+Requirements: Node.js 20 or newer.
 
 ```bash
 npm run check
@@ -93,3 +108,9 @@ npm run build
 `npm run build` writes an unpacked directory and unsigned `.xpi` package to
 `dist/`. Edit `extension/` directly during development, then reload the temporary
 add-on from `about:debugging`.
+
+On Windows, `build.bat` runs the check, test, and build commands above. The XPI
+contains `extension/` only. Activities in the separate
+`ChudPresence-Activities` repository must be updated through the Activity
+Library or loaded locally in Developer Mode; rebuilding the XPI does not
+replace their installed packages.

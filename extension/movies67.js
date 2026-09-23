@@ -309,13 +309,21 @@ function collect() {
   const title = metadata?.title || storedTitle(route);
 
   if (!title) return { idle: true, title: '', playing: false, source: SOURCE };
+  const url = watchUrl(route);
+  const isMovie = route.type === 'movie';
   return {
+    activityName: '67Movies',
+    settingKeys: {
+      enabled: 'sourceMovies67', showPaused: 'movies67ShowPaused', statusDisplay: 'movies67StatusDisplay',
+      showArtwork: 'movies67ShowArtwork', showTimestamps: 'movies67ShowTimestamps', showButtons: 'movies67ShowButtons',
+    },
+    presenceKind: 'video',
     title,
     artist: metadata?.artist || '',
     album: metadata?.album || '',
     artwork: metadata?.artwork || '',
     videoId: route.key,
-    url: watchUrl(route),
+    url,
     channelUrl: '',
     playing: Boolean(player.playing && eventFresh && !player.ended),
     position,
@@ -324,7 +332,17 @@ function collect() {
     idle: false,
     live: false,
     source: SOURCE,
-    kind: route.type === 'movie' ? 'movie' : 'episode',
+    kind: isMovie ? 'movie' : 'episode',
+    display: {
+      details: isMovie ? title : metadata?.artist || title,
+      state: isMovie ? '67Movies' : title,
+      largeText: isMovie ? title : [metadata?.album, title].filter(Boolean).join(' • '),
+      statusFields: { app: 'name', series: 'details', episode: 'state' },
+    },
+    buttons: [
+      url && { label: isMovie ? 'Watch movie' : 'Watch on 67Movies', url },
+      url && { label: 'Open 67Movies', url: `${new URL(url).origin}/` },
+    ].filter(Boolean).slice(0, 2),
   };
 }
 

@@ -2,7 +2,12 @@
 cd /d "%~dp0"
 where node >nul 2>nul
 if errorlevel 1 (
-  echo Node.js 18 or newer is required to package the extension.
+  echo Node.js 20 or newer is required to package the extension.
+  exit /b 1
+)
+node -e "process.exit(Math.max(0, 20 - Number(process.versions.node.split('.')[0])))"
+if errorlevel 1 (
+  echo Node.js 20 or newer is required to package the extension.
   exit /b 1
 )
 
